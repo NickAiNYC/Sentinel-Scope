@@ -10,6 +10,10 @@ SentinelScope automates compliance evidence indexing with LLM classification and
 ## Demo
 
 [▶ Watch Sentinel Scope in action](assets/sentinel-demo.mp4)
+<video width="640" controls>
+  <source src="assets/sentinel-demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 ## 🚀 Quick Start
 \`\`\`bash
