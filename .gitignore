@@ -1,5 +1,35 @@
-!assets/*.mp4
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
 
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (DO NOT COMMIT)
 .streamlit/secrets.toml
-.streamlit/secrets.toml
-.streamlit/secrets.toml
+.env
+*.key
+
+# Keep assets
+!assets/*.mp4
