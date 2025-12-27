@@ -1,8 +1,10 @@
 streamlit
 pandas
 plotly
+requests
 openai
 geopy
+fpdf
 pydantic
 # Added for engineering rigor
 ruff
