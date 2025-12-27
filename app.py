@@ -90,7 +90,7 @@ if uploaded_file:
             st.session_state.analyze = True
     
     with st.expander("📋 Data Preview", expanded=True):
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
     
     # Run analysis if requested
     if st.session_state.get('analyze', False):
@@ -128,7 +128,7 @@ if uploaded_file:
                 
                 with tab1:
                     st.subheader("Classified Evidence")
-                    st.dataframe(classified_df, use_container_width=True)
+                    st.dataframe(classified_df, width='stretch')
                 
                 with tab2:
                     if enable_gap_analysis:
