@@ -18,10 +18,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install ruff mypy
+          pip install ruff mypy pytest
 
       - name: Lint with Ruff
         run: ruff check .
 
       - name: Static Type Check with Mypy
         run: mypy
+
+      - name: Run Unit Tests with Pytest
+        run: pytest tests/
