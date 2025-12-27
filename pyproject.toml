@@ -1,3 +1,9 @@
+[project]
+name = "sentinel-scope"
+version = "0.1.0"
+description = "AI-Augmented Compliance Agent for NYC Construction"
+requires-python = ">=3.10"
+
 [tool.ruff]
 line-length = 88
 target-version = "py310"
@@ -6,7 +12,6 @@ target-version = "py310"
 select = ["E", "F", "I"]
 
 [tool.mypy]
-# Focus strictness on the production-grade core logic
 files = ["core"]
 python_version = "3.10"
 ignore_missing_imports = true
