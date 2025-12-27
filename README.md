@@ -7,8 +7,9 @@ NYC general contractors spend 40-80 hours per project manually searching thousan
 ## 🚀 The Solution
 SentinelScope automates compliance evidence indexing with LLM classification and gap detection.
 
-## 🎥 Demo
-![SentinelScope Demo](https://github.com/NickAiNYC/sentinel-scope/raw/main/assets/demo/demo_optimized.gif)
+## Demo
+
+[▶ Watch Sentinel Scope in action](assets/sentinel-demo.mp4)
 
 ## 🚀 Quick Start
 \`\`\`bash
