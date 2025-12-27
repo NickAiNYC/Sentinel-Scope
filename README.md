@@ -1,51 +1,47 @@
-# 🛡️ SentinelScope
-**AI-Augmented Compliance Agent for NYC Construction**
+🛡️ SentinelScope
+AI-Augmented Compliance Agent for NYC Construction
 
-*Turn insurance renewal "fire drills" into automated evidence workflows*
+Turn insurance renewal "fire drills" into automated evidence workflows
 
-## 🎯 The Problem
-NYC general contractors spend **40-80 hours per project** scrambling during DOB inspections and insurance renewals—manually searching thousands of unstructured OpenSpace captures to prove milestone completion.
+🎯 The Problem
+NYC general contractors spend 40-80 hours per project scrambling during DOB inspections and insurance renewals—manually searching thousands of unstructured OpenSpace captures to prove milestone completion.
 
-## 🚀 The Solution
+🚀 The Solution
 SentinelScope automates construction compliance evidence indexing with an LLM-powered pipeline:
 
+text
 📤 Upload → 🧠 AI Classification → ⚠️ Gap Detection → 📄 Report Generation → 🚨 Risk Alerts
+Core Features
+🧠 Intelligent Classification: LLM tags OpenSpace captures by milestone, MEP system, and location
 
+⚠️ Automated Gap Detection: Compares progress against required compliance milestones
 
-### Core Features
-- **🧠 Intelligent Classification**: LLM tags OpenSpace captures by milestone, MEP system, and location
-- **⚠️ Automated Gap Detection**: Compares progress against required compliance milestones
-- **📄 Broker-Ready Proof Tables**: Generates audit-ready evidence documentation
-- **🚨 Live Risk Radar**: Pulls real-time NYC DOB violation alerts within project radius
-- **⚡ Streamlit Dashboard**: Interactive interface for contractors and brokers
+📄 Broker-Ready Proof Tables: Generates audit-ready evidence documentation
 
-## 🎥 Demo
+🚨 Live Risk Radar: Pulls real-time NYC DOB violation alerts within project radius
 
-<div align="center">
-  <video width="800" autoplay loop muted playsinline style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-    <source src="https://github.com/NickAiNYC/sentinel-scope/raw/main/assets/demo/demo.mp4?v=1" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-  <p><em>SentinelScope processing OpenSpace captures and generating compliance reports</em></p>
-</div>
+⚡ Streamlit Dashboard: Interactive interface for contractors and brokers
 
-**👉 [Live Application](https://sentinelscope.streamlit.app/)**
+🎥 Demo
+<div align="center"> <img src="https://github.com/NickAiNYC/sentinel-scope/raw/main/assets/demo/demo_optimized.gif" width="800" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"> <p><em>SentinelScope processing OpenSpace captures and generating compliance reports</em></p> </div>
+👉 Live Application
 
-## 🚀 Quick Start
-
-```bash
+🚀 Quick Start
+bash
 # Clone and run locally
 git clone https://github.com/NickAiNYC/sentinel-scope
 cd sentinel-scope
 pip install -r requirements.txt
 streamlit run app.py
-graph LR
-    A[User Uploads CSV] --> B[LLM Classification Engine]
-    B --> C[Compliance Gap Detection]
-    C --> D[Evidence Report Generator]
-    D --> E[PDF/HTML Output]
-    F[NYC Open Data API] --> G[DOB Violation Alerts]
-    C --> G
+Test with sample data: Download data/mock_frames.csv and upload to the app.
+
+🏗️ Architecture
+
+
+
+
+
+
 
 🛠️ Tech Stack
 Layer	Technology	Purpose
@@ -54,13 +50,11 @@ AI/ML	Anthropic Claude API, DeepSeek	Construction domain understanding
 Data	NYC Open Data API (Socrata)	Live DOB violation feeds
 Processing	Python, Pandas	Data transformation & analysis
 Output	ReportLab, HTML	Professional evidence documentation
-
 📊 Sample Output
 Date	Location	Milestone	Evidence	Gap?	Confidence
 2025-01-15	Floor 5	MEP Rough-in	Capture #123	✅ No	95%
 2025-01-10	Floor 4	Fireproofing	Capture #456	⚠️ Yes	87%
 2025-01-05	Basement	Structural	Capture #789	✅ No	92%
-
 🧠 The AI-Augmented Approach
 This isn't just another LLM wrapper—it's product thinking in code:
 
@@ -100,3 +94,4 @@ AI-Augmented Technical Product Builder focused on shipping solutions, not just w
 SentinelScope represents the new generation of engineering: combining domain expertise, AI capabilities, and product thinking to solve real business problems. It's not about the fanciest algorithm—it's about delivering value where it counts.
 
 License: MIT · Status: Actively developed
+
