@@ -1,21 +1,30 @@
-# SentinelScope Development Process
+# 🚀 SentinelScope Development Journey
 
-## 🎯 Problem Discovery
-- Identified NYC construction compliance "fire drills"
-- Interviewed contractors about insurance renewal pain points
+## 🎯 Phase 1: Problem Discovery
+- Interviewed NYC contractors about compliance "fire drills"
+- Identified 40-80 hour manual evidence gathering pain point
+- Validated need for automated OpenSpace capture indexing
 
-## 🏗️ Architecture
-- LLM classification pipeline for OpenSpace captures
+## 🏗️ Phase 2: Architecture  
+- LLM classification pipeline for construction milestones
 - NYC DOB API integration for live risk alerts
 - Streamlit for rapid UI deployment
+- Batch processing design for thousands of captures
 
-## ⚡ Shipping
-- Built MVP in focused timeline
-- Deployed to Streamlit Cloud (live demo)
-- Fixed GitHub display issues (GIF → MP4 conversion)
-- Maintained clean, documented codebase
+## ⚡ Phase 3: Shipping
+- Core engine with fallback logic
+- Streamlit Cloud deployment
+- Sample data pipeline
+- README and documentation
 
-## 📈 Metrics
-- Demo video now autoplays on GitHub
-- Live application: https://sentinelscope.streamlit.app/
-- Clear value proposition: Turns 40+ hour manual reviews into minutes
+## 🎨 Phase 4: Polish
+- GitHub presentation optimization
+- Video demo with thumbnail
+- Business impact metrics
+- Professional storytelling
+
+## 🧠 Key Insights
+- Live demo > perfect code
+- Business metrics tell the story  
+- GitHub is your portfolio front door
+- Ship fast, iterate based on feedback
