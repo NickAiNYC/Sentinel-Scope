@@ -1,13 +1,25 @@
 """
 SentinelScope Constants
 Hard-coded domain knowledge for NYC Building Code (BC) 2022.
+Integrated with Architectural Earth-Tone Design Tokens.
 """
+
+# --- UI DESIGN TOKENS (Architectural Earth-Tone Palette) ---
+BRAND_THEME = {
+    "BACKGROUND_BEIGE": "#F5F5DD",  # Main app background
+    "SIDEBAR_TAN": "#D2B48C",       # Sidebar and secondary panels
+    "PRIMARY_BROWN": "#5C4033",     # Deep coffee (Main headers/buttons)
+    "SADDLE_BROWN": "#8B4513",      # Accents and icons
+    "MAHOGANY": "#4E2C23",          # Progress bars and gauges
+    "SUCCESS_GREEN": "#4F7942",     # Sage green for compliance
+    "DANGER_RUST": "#8B0000",       # Dark rust for violations
+    "WARNING_AMBER": "#B8860B",     # Dark goldenrod for warnings
+}
 
 # --- NYC GEOGRAPHY ---
 BOROUGHS = ["MANHATTAN", "BROOKLYN", "QUEENS", "BRONX", "STATEN ISLAND"]
 
 # --- NYC BUILDING CODE 2022 REFERENCES ---
-# These are the actual chapters your Gap Detector will cite in reports.
 NYC_BC_REFS = {
     "STRUCTURAL": {
         "CHAPTER": "BC Chapter 16",
@@ -29,7 +41,6 @@ NYC_BC_REFS = {
 }
 
 # --- CONSTRUCTION MILESTONES ---
-# Used by the Classifier to normalize AI detections.
 MILESTONES = {
     "EXCAVATION": "Foundation & Earthwork",
     "SUPERSTRUCTURE": "Structural Frame / Superstructure",
@@ -40,7 +51,6 @@ MILESTONES = {
 }
 
 # --- DOB VIOLATION SEVERITY ---
-# Maps Socrata API "Violation Category" to risk levels.
 VIOLATION_LEVELS = {
     "VWH": "CRITICAL",  # Violation - Work Without Permit Hazardous
     "VH":  "HIGH",      # Violation Hazardous
@@ -49,21 +59,11 @@ VIOLATION_LEVELS = {
 }
 
 # --- COMPLIANCE SCORING ---
-# Weights for the Gap Analysis Engine.
 SCORING_WEIGHTS = {
     "LIFE_SAFETY": 0.40,
     "STRUCTURAL": 0.35,
     "ENVIRONMENTAL": 0.15,
     "ADMINISTRATIVE": 0.10
-}
-
-# --- UI DESIGN TOKENS ---
-# Ensure the Dashboard and PDF look identical.
-BRAND_THEME = {
-    "PRIMARY_BLUE": "#1E3A8A", # NYC Official Blue
-    "CRITICAL_RED": "#DC2626",
-    "WARNING_AMBER": "#F59E0B",
-    "SUCCESS_GREEN": "#10B981"
 }
 
 # --- AI AGENT DEFAULTS ---
