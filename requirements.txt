@@ -4,3 +4,7 @@ plotly
 openai
 geopy
 pydantic
+# Added for engineering rigor
+ruff
+mypy
+pytest
