@@ -1,0 +1,14 @@
+name: Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt
+      - run: python -m pytest test_sentinel.py -v
+      - run: python -c "import streamlit; print('Streamlit version:', streamlit.__version__)"
+      - run: python -c "from app import init_deepseek_client; print('Import successful')"
