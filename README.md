@@ -52,7 +52,7 @@ OpenSpace CSV → milestone tags → compliance gaps → PDF/HTML table → NYC 
 Nick Altstein · NYC · [thrivai.ai](https://thrivai.ai)
 
 ## 🎥 Demo
-![SentinelScope Demo](demo.gif)
+![SentinelScope Demo](https://github.com/NickAiNYC/sentinel-scope/raw/main/demo.gif)
 
 ## 🌐 Live Demo
 **🌐 Live Demo:** [https://sentinelscope.streamlit.app/](https://sentinelscope.streamlit.app/)
