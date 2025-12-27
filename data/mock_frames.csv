@@ -1,3 +1,5 @@
-date,description,image_path
-2025-01-15,MEP rough-in inspection floor 5,captures/mep_001.jpg
-2025-01-10,Structural steel installation,captures/steel_001.jpg
+date,description,image_path,milestone,confidence,location_floor
+2025-01-05,Foundation concrete pour complete,captures/found_001.jpg,Foundation,0.98,B1
+2025-01-10,Structural steel installation,captures/steel_001.jpg,Structural Steel,0.94,L1
+2025-01-15,MEP rough-in inspection floor 5,captures/mep_001.jpg,MEP,0.88,L5
+2025-01-20,Fireproofing application on steel,captures/fire_001.jpg,Fireproofing,0.72,L1
