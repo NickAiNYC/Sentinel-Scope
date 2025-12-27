@@ -55,5 +55,11 @@ Nick Altstein · NYC · [thrivai.ai](https://thrivai.ai)
 ![SentinelScope Demo](demo.gif)
 
 ## 🌐 Live Demo
-Deploying to Streamlit Cloud...
+**🌐 Live Demo:** [https://sentinelscope.streamlit.app/](https://sentinelscope.streamlit.app/)
 
+
+## 🚀 Quick Test
+1. Visit the [live demo](https://sentinelscope.streamlit.app/)
+2. Download sample data: `data/mock_frames.csv`
+3. Upload it to the app
+4. Click "Analyze Compliance" to see AI classification and gap detection
