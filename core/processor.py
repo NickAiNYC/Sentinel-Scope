@@ -1,7 +1,8 @@
 import concurrent.futures
 import base64
-from typing import List
-from openai import OpenAI  # DeepSeek uses OpenAI-compatible SDK
+import json
+from typing import List, Union
+from openai import OpenAI
 from core.gap_detector import ComplianceGapEngine
 from core.models import CaptureClassification, GapAnalysisResponse
 
@@ -29,41 +30,61 @@ class SentinelBatchProcessor:
         - Be conservative with confidence if the image is blurry.
         """
 
-    def _encode_image(self, image_path: str) -> str:
-        """Helper to convert local images to Base64 for the Vision API."""
-        with open(image_path, "rb") as image_file:
+    def _prepare_base64(self, file_source: Union[str, any]) -> str:
+        """
+        Works for both local file paths (strings) and Streamlit UploadedFile objects.
+        """
+        if hasattr(file_source, 'read'):
+            # This is a Streamlit UploadedFile (BytesIO)
+            file_source.seek(0)
+            return base64.b64encode(file_source.read()).decode('utf-8')
+        
+        # This is a standard local file path
+        with open(file_source, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode('utf-8')
 
-    def _process_single_image(self, image_path: str) -> CaptureClassification:
+    def _process_single_image(self, file_source: Union[str, any]) -> CaptureClassification:
         """
-        Calls DeepSeek-V3.2-Vision to analyze the construction capture.
+        Calls DeepSeek-V3.2-Vision with error resilience.
         """
-        base64_image = self._encode_image(image_path)
-        
-        response = self.client.chat.completions.create(
-            model="deepseek-v3.2-vision",
-            messages=[
-                {"role": "system", "content": self.system_prompt},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Inspect this site photo for NYC BC 2022 compliance."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                    ],
-                }
-            ],
-            response_format={"type": "json_object"} # Forces valid JSON output
-        )
-
-        # Parse the AI response directly into our Pydantic Model
-        import json
-        ai_data = json.loads(response.choices[0].message.content)
-        return CaptureClassification(**ai_data)
-
-    def run_audit(self, image_paths: List[str]) -> GapAnalysisResponse:
-        """Processes multiple images in parallel and runs a full gap analysis."""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            results = list(executor.map(self._process_single_image, image_paths))
+        try:
+            base64_image = self._prepare_base64(file_source)
             
-        found_milestones = list(set([res.milestone for res in results]))
+            response = self.client.chat.completions.create(
+                model="deepseek-v3.2-vision",
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Inspect this site photo for NYC BC 2022 compliance."},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                        ],
+                    }
+                ],
+                response_format={"type": "json_object"}
+            )
+
+            ai_data = json.loads(response.choices[0].message.content)
+            return CaptureClassification(**ai_data)
+        
+        except Exception as e:
+            # Fallback for failed images so the whole batch doesn't die
+            return CaptureClassification(
+                milestone="Unknown",
+                floor="?",
+                zone="?",
+                confidence=0.0,
+                evidence_notes=f"Error processing image: {str(e)}"
+            )
+
+    def run_audit(self, file_sources: List[Union[str, any]]) -> GapAnalysisResponse:
+        """Processes multiple images/uploads in parallel and runs a full gap analysis."""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Map now accepts both paths and Streamlit files
+            results = list(executor.map(self._process_single_image, file_sources))
+            
+        # Filter for unique milestones, ignoring "Unknown" failures
+        found_milestones = list(set([res.milestone for res in results if res.milestone != "Unknown"]))
+        
         return self.engine.detect_gaps(found_milestones)
