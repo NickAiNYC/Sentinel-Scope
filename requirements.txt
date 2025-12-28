@@ -1,12 +1,18 @@
-streamlit
-pandas
-plotly
-requests
-openai
-geopy
-fpdf
-pydantic
-# Added for engineering rigor
-ruff
-mypy
-pytest
+# Core Web Framework & Data
+streamlit==1.52.2
+pandas==2.2.3
+plotly==6.0.0
+requests==2.32.3
+
+# AI & Geolocation
+openai==2.14.0
+geopy==2.4.1
+pydantic==2.12.5
+
+# Reporting & Utilities
+fpdf==1.7.2
+
+# Engineering Rigor (Dev dependencies)
+ruff==0.14.10
+mypy==1.19.1
+pytest==9.0.2
