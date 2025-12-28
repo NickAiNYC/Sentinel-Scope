@@ -1,22 +1,27 @@
-# --- Core Web Framework & Data ---
+# --- Core Web Framework & UI ---
+# Streamlit 1.52.0+ is required for the new st.status and performance bumps
 streamlit>=1.52.0
 pandas>=2.3.3
 plotly>=6.0.0
 requests>=2.32.3
 
-# --- AI & Geolocation ---
+# --- AI Reasoning & NLP ---
+# DeepSeek uses the standard OpenAI SDK (OpenAI-Compatible API)
 openai>=2.14.0
-anthropic>=0.75.0
+# RapidFuzz is the 2025 standard for high-speed string matching
 rapidfuzz>=3.14.3
-geopy>=2.4.1
 pydantic>=2.12.5
+
+# --- Geolocation & NYC Property Data ---
+geopy>=2.4.1
 python-dotenv>=1.0.1
 
-# --- Reporting & Utilities ---
-fpdf2>=2.8.2
-Pillow>=11.0.0
+# --- Reporting & Image Processing ---
+# fpdf2 is used for generating the forensic PDF audit logs
+fpdf2>=2.8.5
+Pillow>=12.0.0
 
-# --- Engineering Rigor (Dev Dependencies) ---
+# --- Engineering & Quality Gates (Optional for CI/CD) ---
 ruff>=0.8.0
 mypy>=1.14.0
 pytest>=8.3.4
