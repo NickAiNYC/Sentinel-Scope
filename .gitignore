@@ -1,36 +1,26 @@
 # Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
 .Python
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
 
 # Virtual Environment
 venv/
 env/
-ENV/
 
-# IDE
+# IDE & OS
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Secrets (DO NOT COMMIT)
+# Secrets & Keys (CRITICAL)
 .streamlit/secrets.toml
 .env
 *.key
+secrets.py
 
-# Keep assets
+# Construction Site Assets
+# Allow the specific mp4s you want, ignore the rest of the noise
+assets/temp/
+*.log
 !assets/*.mp4
-.DS_Store
