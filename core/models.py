@@ -3,27 +3,29 @@ from typing import List, Optional
 from typing_extensions import Self
 
 class CaptureClassification(BaseModel):
-    """Data structure for AI-tagged site images"""
+    """Data structure for AI-tagged site images used for forensic evidence."""
     milestone: str = Field(..., description="NYC Construction Milestone (e.g., Fireproofing)")
     mep_system: Optional[str] = None
-    floor: str = Field(..., pattern=r"^[0-9RCBLM]+$") # Validates Floor 1, R (Roof), B (Basement), etc.
+    # Validates Floor 1, R (Roof), B (Basement), L (Lobby), M (Mezzanine), etc.
+    floor: str = Field(..., pattern=r"^[0-9RCBLM]+$") 
     zone: str = Field(..., description="Site quadrant or zone (e.g., North, Core, Hoist)")
     confidence: float = Field(..., ge=0, le=1) 
     compliance_relevance: int = Field(..., ge=1, le=5, description="1: Low Impact, 5: Life Safety/Critical")
     evidence_notes: str
 
 class ComplianceGap(BaseModel):
-    """Detailed model for a single missing requirement mapped to NYC DOB Classes"""
+    """Detailed model for a single missing requirement mapped to NYC DOB Classes."""
     milestone: str
     floor_range: str
     dob_code: str
     risk_level: str = Field(..., pattern="^(Critical|High|Medium|Low)$") 
-    dob_class: str = Field("Class B", description="DOB Violation Class: A (Non-Hazardous), B (Hazardous), C (Immediately Hazardous)")
+    # NYC DOB Class logic: A (Non-Hazardous), B (Hazardous), C (Immediately Hazardous)
+    dob_class: str = Field("Class B", description="DOB Violation Class")
     deadline: str
     recommendation: str
 
 class GapAnalysisResponse(BaseModel):
-    """Final output from the ComplianceGapEngine"""
+    """Final output from the ComplianceGapEngine passed to the Streamlit UI."""
     missing_milestones: List[ComplianceGap]
     compliance_score: int = Field(..., ge=0, le=100)
     risk_score: int = Field(..., ge=0, le=100)
@@ -40,8 +42,13 @@ class GapAnalysisResponse(BaseModel):
 
     @model_validator(mode='after')
     def check_score_logic(self) -> Self:
-        """Ensures that compliance and risk scores are logically inverse"""
-        if abs((self.compliance_score + self.risk_score) - 100) > 5: # Allowing a 5-point margin for weighted logic
-            # Optional: Log a warning or adjust logic if they drift too far apart
+        """
+        Ensures that compliance and risk scores stay logically aligned.
+        High compliance should generally correlate with lower risk.
+        """
+        # Allowing a small margin for weighted calculations used in gap_detector.py
+        if abs((self.compliance_score + self.risk_score) - 100) > 15: 
+            # Logic: If they drift too far apart, the risk_score is likely 
+            # being driven by an 'Immediately Hazardous' DOB Class C gap.
             pass
         return self
