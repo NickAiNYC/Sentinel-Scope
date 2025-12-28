@@ -4,7 +4,8 @@ Integrates NYC BC 2022 mapping, Fuzzy Matching, and Claude AI Reasoning.
 """
 
 from typing import List, Optional
-from fuzzywuzzy import fuzz, process
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 import anthropic
 from core.models import GapAnalysisResponse, ComplianceGap, CaptureClassification
 from core.constants import NYC_BC_REFS
