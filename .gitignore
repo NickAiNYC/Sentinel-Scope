@@ -33,3 +33,4 @@ Thumbs.db
 
 # Keep assets
 !assets/*.mp4
+.DS_Store
