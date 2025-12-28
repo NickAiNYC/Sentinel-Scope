@@ -4,31 +4,33 @@ from typing_extensions import Self
 
 class CaptureClassification(BaseModel):
     """Data structure for AI-tagged site images used for forensic evidence."""
-    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
+    model_config = ConfigDict(
+        populate_by_name=True, 
+        str_strip_whitespace=True,
+        frozen=False # Set to True if images should be immutable
+    )
 
     milestone: str = Field(..., description="NYC Construction Milestone (e.g., Fireproofing)")
     mep_system: Optional[str] = None
-    # Optimized pattern for 2025: Handles floors like PH (Penthouse), SC (Sub-cellar), 
-    # and standard 0-9RCBLM codes.
+    # Enhanced pattern: Supports PH (Penthouse), C (Cellar), and typical floor numbers
     floor: str = Field(..., pattern=r"^[0-9RCBLMPHSC]+$") 
-    zone: str = Field(..., description="Site quadrant or zone (e.g., North, Core, Hoist)")
+    zone: str = Field(..., description="Site quadrant (North, Core, Hoist, etc.)")
     confidence: float = Field(..., ge=0, le=1) 
-    compliance_relevance: int = Field(..., ge=1, le=5, description="1: Low Impact, 5: Life Safety/Critical")
+    compliance_relevance: int = Field(..., ge=1, le=5, description="1: Low, 5: Life Safety Critical")
     evidence_notes: str
 
 class ComplianceGap(BaseModel):
-    """Detailed model for a single missing requirement mapped to NYC DOB Classes."""
+    """Maps a missing requirement to NYC DOB Violation Classes."""
     milestone: str
     floor_range: str
     dob_code: str
     risk_level: str = Field(..., pattern="^(Critical|High|Medium|Low)$") 
-    # NYC DOB Class logic: A (Non-Hazardous), B (Hazardous), C (Immediately Hazardous)
-    dob_class: str = Field("Class B", description="DOB Violation Class")
+    dob_class: str = Field("Class B", description="NYC DOB Violation Class (A, B, or C)")
     deadline: str
     recommendation: str
 
 class GapAnalysisResponse(BaseModel):
-    """Final output from the ComplianceGapEngine passed to the Streamlit UI."""
+    """Final output from ComplianceGapEngine for the Streamlit Dashboard."""
     missing_milestones: List[ComplianceGap]
     compliance_score: int = Field(..., ge=0, le=100)
     risk_score: int = Field(..., ge=0, le=100)
@@ -36,25 +38,25 @@ class GapAnalysisResponse(BaseModel):
     gap_count: int
     next_priority: str
 
-    @field_validator('compliance_score', 'risk_score')
+    @field_validator('compliance_score', 'risk_score', mode='after')
     @classmethod
     def validate_scores(cls, v: int) -> int:
-        # Pydantic v2 handles the range check via Field(ge=0, le=100), 
-        # so this is now strictly for custom business logic if needed.
+        """Pydantic v2.12 native field validation."""
         return v
 
     @model_validator(mode='after')
     def check_score_logic(self) -> Self:
         """
-        Ensures that compliance and risk scores stay logically aligned.
-        If a 'Critical' gap exists, risk_score is elevated regardless of compliance %.
+        Refined 2025 Logic: Auto-escalates Risk Score if Critical gaps exist.
+        NOTE: Removed @classmethod as per Pydantic 2.12 deprecation warnings.
         """
         has_critical = any(gap.risk_level == "Critical" for gap in self.missing_milestones)
         
-        # Logic: If there is a critical safety gap, the risk score should reflect high risk
-        # even if 90% of other milestones are finished.
-        if has_critical and self.risk_score < 50:
-             # Auto-correct risk score to reflect life-safety priority
-             self.risk_score = max(self.risk_score, 75)
+        # If there's a Critical (Life Safety) gap, risk can never be 'Low' (under 75)
+        if has_critical:
+            self.risk_score = max(self.risk_score, 75)
+            # Ensure the next_priority reflects the critical gap
+            critical_gap = next(g for g in self.missing_milestones if g.risk_level == "Critical")
+            self.next_priority = f"🚨 URGENT: {critical_gap.milestone} ({critical_gap.dob_class})"
              
         return self
