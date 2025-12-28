@@ -1,17 +1,18 @@
 """
-SentinelScope Gap Detector v2.5 (2025.12 Update)
-Integrates NYC BC 2022/2025 mapping, RapidFuzz Matching, and Claude 4.5 Reasoning.
+SentinelScope Gap Detector v2.6 (DeepSeek Update - Dec 2025)
+Integrates NYC BC 2022/2025 mapping, RapidFuzz Matching, and DeepSeek Reasoning.
+Removed Anthropic/Claude dependency → now uses DeepSeek for remediation (cost-effective, high-performance).
 """
-
 from typing import List, Optional
 from rapidfuzz import fuzz, process
-import anthropic
+from openai import OpenAI  # DeepSeek is OpenAI SDK compatible
 import streamlit as st
 from core.models import GapAnalysisResponse, ComplianceGap, CaptureClassification
 from core.constants import NYC_BC_REFS
 
+
 class ComplianceGapEngine:
-    # 2025 Enhanced Domain Logic
+    # 2025 Enhanced Domain Logic (unchanged)
     TARGET_REQUIREMENTS = {
         "structural": {
             "Foundation": {"code": NYC_BC_REFS["STRUCTURAL"]["FOUNDATIONS"], "criticality": "Critical", "weight": 35},
@@ -32,51 +33,57 @@ class ComplianceGapEngine:
         self.project_type = project_type.lower()
         self.fuzzy_threshold = fuzzy_threshold
         self.rules = self.TARGET_REQUIREMENTS.get(
-            self.project_type, 
+            self.project_type,
             self.TARGET_REQUIREMENTS["structural"]
         )
 
     def _get_ai_remediation(self, milestone: str, code: str, api_key: str) -> str:
-        """Uses Claude 4.5 Opus for SOTA NYC-specific remediation steps."""
-        client = anthropic.Anthropic(api_key=api_key)
-        # 2025 System Prompt: Higher instruction following for legal/code compliance
-        prompt = (f"Act as a Senior NYC DOB Auditor. A project site is missing evidence of '{milestone}' "
-                  f"under {code}. Based on NYC BC 2022 and 2025 updates, provide 2 precise, "
-                  f"field-actionable remediation steps to clear this gap. Be concise.")
+        """Uses DeepSeek (via OpenAI-compatible SDK) for NYC-specific remediation steps."""
+        client = OpenAI(
+            api_key=api_key,
+            base_url="https://api.deepseek.com"
+        )
+        prompt = (
+            f"Act as a Senior NYC DOB Auditor. A project site is missing evidence of '{milestone}' "
+            f"under {code}. Based on NYC BC 2022 and 2025 updates, provide 2 precise, "
+            f"field-actionable remediation steps to clear this gap. Be concise and professional. "
+            f"Respond with only the two steps, numbered."
+        )
         try:
-            message = client.messages.create(
-                model="claude-4-5-opus-20251101",
+            response = client.chat.completions.create(
+                model="deepseek-chat",  # DeepSeek-V3 (excellent reasoning, low cost)
                 max_tokens=200,
+                temperature=0.3,
                 messages=[{"role": "user", "content": prompt}]
             )
-            return message.content[0].text
-        except Exception:
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            st.error(f"DeepSeek remediation call failed: {str(e)}")
             return f"🚨 URGENT: Conduct physical site audit for {milestone}. Verify compliance with {code} immediately."
 
     def detect_gaps(self, findings: List[CaptureClassification], api_key: Optional[str] = None) -> GapAnalysisResponse:
         """Analyzes AI findings against NYC regulatory requirements."""
-        # Use a higher confidence floor for forensic data to reduce false positives
         found_names = [f.milestone for f in findings if f.confidence > 0.6]
-        
+
         missing_milestones = []
         earned_weight = 0
         total_weight = sum(info['weight'] for info in self.rules.values())
 
         for req, info in self.rules.items():
-            # RapidFuzz: 2025 standard for high-speed string matching
             match_result = process.extractOne(req, found_names, scorer=fuzz.WRatio)
             is_present = match_result and match_result[1] >= self.fuzzy_threshold
-            
+
             if is_present:
                 earned_weight += info['weight']
             else:
-                # Severity Mapping for NYC DOB Classes
                 severity_to_class = {"Critical": "Class C", "High": "Class B", "Medium": "Class B", "Low": "Class A"}
                 current_class = severity_to_class.get(info["criticality"], "Class B")
 
-                # Context-Aware Remediation
-                remediation = self._get_ai_remediation(req, info['code'], api_key) if api_key else f"Request photo evidence for {req}."
-                
+                remediation = (
+                    self._get_ai_remediation(req, info['code'], api_key)
+                    if api_key else f"Request photo evidence for {req}."
+                )
+
                 missing_milestones.append(ComplianceGap(
                     milestone=req,
                     floor_range="Audit Required",
@@ -87,11 +94,9 @@ class ComplianceGapEngine:
                     recommendation=remediation
                 ))
 
-        # Scoring Logic (Weighted Compliance)
         compliance_score = int((earned_weight / total_weight) * 100) if total_weight > 0 else 0
         risk_score = 100 - compliance_score
-        
-        # Summary messaging for the Streamlit Sidebar
+
         critical_count = sum(1 for g in missing_milestones if g.risk_level == "Critical")
         if critical_count > 0:
             priority = f"🚨 {critical_count} CRITICAL GAPS: STOP WORK RISK"
