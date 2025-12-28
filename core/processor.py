@@ -2,7 +2,7 @@ import concurrent.futures
 import base64
 import os
 import json
-from typing import List, Union, Optional, Any  # <--- CRITICAL: 'Union' and 'Any' must be here
+from typing import List, Union, Optional, Any
 from openai import OpenAI
 from pydantic import ValidationError
 
