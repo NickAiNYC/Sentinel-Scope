@@ -7,12 +7,12 @@ class CaptureClassification(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True, 
         str_strip_whitespace=True,
-        frozen=False # Set to True if images should be immutable
+        frozen=False
     )
 
     milestone: str = Field(..., description="NYC Construction Milestone (e.g., Fireproofing)")
     mep_system: Optional[str] = None
-    # Enhanced pattern: Supports PH (Penthouse), C (Cellar), and typical floor numbers
+    # Supports floor codes like 04, PH (Penthouse), SC (Sub-Cellar), M (Mezzanine)
     floor: str = Field(..., pattern=r"^[0-9RCBLMPHSC]+$") 
     zone: str = Field(..., description="Site quadrant (North, Core, Hoist, etc.)")
     confidence: float = Field(..., ge=0, le=1) 
@@ -41,22 +41,26 @@ class GapAnalysisResponse(BaseModel):
     @field_validator('compliance_score', 'risk_score', mode='after')
     @classmethod
     def validate_scores(cls, v: int) -> int:
-        """Pydantic v2.12 native field validation."""
+        """Ensures scores remain within valid integer bounds."""
         return v
 
     @model_validator(mode='after')
     def check_score_logic(self) -> Self:
         """
-        Refined 2025 Logic: Auto-escalates Risk Score if Critical gaps exist.
-        NOTE: Removed @classmethod as per Pydantic 2.12 deprecation warnings.
+        Forensic Logic: Auto-escalates Risk Score if Critical gaps exist.
+        Ensures the dashboard accurately reflects Life Safety hazards.
         """
         has_critical = any(gap.risk_level == "Critical" for gap in self.missing_milestones)
         
-        # If there's a Critical (Life Safety) gap, risk can never be 'Low' (under 75)
         if has_critical:
+            # Enforce a minimum Risk Score of 75 for Critical (Class A) hazards
             self.risk_score = max(self.risk_score, 75)
-            # Ensure the next_priority reflects the critical gap
-            critical_gap = next(g for g in self.missing_milestones if g.risk_level == "Critical")
-            self.next_priority = f"🚨 URGENT: {critical_gap.milestone} ({critical_gap.dob_class})"
+            
+            # Find the first critical gap to highlight in the dashboard header
+            try:
+                critical_gap = next(g for g in self.missing_milestones if g.risk_level == "Critical")
+                self.next_priority = f"🚨 URGENT: {critical_gap.milestone} ({critical_gap.dob_class})"
+            except StopIteration:
+                pass
              
         return self
