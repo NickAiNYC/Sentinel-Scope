@@ -4,7 +4,7 @@ import json
 import os
 from typing import List, Union
 from openai import OpenAI
-from core.gap_detector import ComplianceGapEngine
+from core.gap_detector import ComplianceGapEngine as DOBEngine
 from core.models import CaptureClassification, GapAnalysisResponse
 
 class SentinelBatchProcessor:
