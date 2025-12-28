@@ -16,6 +16,7 @@ class SentinelBatchProcessor:
     def __init__(self, engine: ComplianceGapEngine, api_key: str, max_workers: int = 5):
         self.engine = engine
         self.max_workers = max_workers
+        # DeepSeek uses the OpenAI SDK format
         self.client = OpenAI(
             api_key=api_key, 
             base_url="https://api.deepseek.com"
@@ -47,9 +48,11 @@ class SentinelBatchProcessor:
         """Handles encoding for local paths and Streamlit UploadedFile objects."""
         try:
             if hasattr(file_source, 'read'):
+                # Streamlit UploadedFile (BytesIO)
                 file_source.seek(0)
                 return base64.b64encode(file_source.read()).decode('utf-8')
             
+            # Standard local file path
             with open(file_source, "rb") as image_file:
                 return base64.b64encode(image_file.read()).decode('utf-8')
         except Exception as e:
@@ -60,6 +63,7 @@ class SentinelBatchProcessor:
         try:
             base64_image = self._prepare_base64(file_source)
             
+            # Using deepseek-chat (unified text/vision model)
             response = self.client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[
@@ -102,9 +106,13 @@ class SentinelBatchProcessor:
     def run_audit(self, file_sources: List[Union[str, any]]) -> List[CaptureClassification]:
         """Processes multiple site captures in parallel."""
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Map the processing function across all uploaded files
             results = list(executor.map(self._process_single_image, file_sources))
         return results
 
     def finalize_gap_analysis(self, findings: List[CaptureClassification]) -> GapAnalysisResponse:
-        """Passes findings to the engine for score and gap mapping."""
-        return self.engine.detect_gaps(findings)
+        """
+        Passes findings and the DeepSeek client to the engine 
+        for technical remediation reasoning and scoring.
+        """
+        return self.engine.detect_gaps(findings, self.client)
