@@ -2,6 +2,9 @@ import requests
 from typing import List, Dict, Optional
 import os
 
+# Explicitly define what is exportable from this module
+__all__ = ['DOBEngine']
+
 class DOBEngine:
     """
     NYC DOB Data Integration Engine.
@@ -22,6 +25,7 @@ class DOBEngine:
         endpoint = "https://data.cityofnewyork.us/resource/6bgk-3dad.json"
         
         # Pull App Token from environment for higher rate limits
+        # On Streamlit Cloud, set NYC_DATA_APP_TOKEN in 'Secrets'
         app_token = os.getenv("NYC_DATA_APP_TOKEN")
         
         headers = {}
@@ -30,7 +34,7 @@ class DOBEngine:
 
         # Filter by BBL and order by most recent
         params = {
-            "bbl": bbl,
+            "bbl": str(bbl), # Ensure BBL is a string for the query
             "$limit": 10,
             "$order": "issue_date DESC", 
             "$select": "violation_number, violation_type, issue_date, violation_category, respondent_name"
@@ -50,17 +54,19 @@ class DOBEngine:
                 # Format dates and clean strings for the Streamlit UI
                 for item in data:
                     if 'issue_date' in item:
-                        item['issue_date'] = item['issue_date'][:10]
+                        item['issue_date'] = item['issue_date'][:10] # Extract YYYY-MM-DD
                     
-                    # Clean up respondent names (often in ALL CAPS)
+                    # Clean up respondent names (convert ALL CAPS to Title Case)
                     if 'respondent_name' in item:
-                        item['respondent_name'] = item['respondent_name'].title()
+                        item['respondent_name'] = str(item['respondent_name']).title()
                         
                 return data
             
+            # Silent logging for debugging status codes
             print(f"NYC Data Portal returned status: {response.status_code}")
             return []
 
         except Exception as e:
-            print(f"Critical DOB API Error: {e}")
+            # Catching connection timeouts or API changes
+            print(f"Critical DOB API Error: {str(e)}")
             return []
