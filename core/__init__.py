@@ -1,6 +1,9 @@
-"""
-SentinelScope core modules for construction compliance AI
-"""
+from .dob_engine import DOBEngine
+from .gap_detector import ComplianceGapEngine
+from .processor import SentinelBatchProcessor
 
-__version__ = "0.1.0"
-__author__ = "Nick Altstein"
+__all__ = [
+    'DOBEngine', 
+    'ComplianceGapEngine', 
+    'SentinelBatchProcessor'
+]
