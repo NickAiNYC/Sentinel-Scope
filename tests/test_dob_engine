@@ -1,0 +1,17 @@
+def test_dob_alert_trigger(mocker):
+    # 1. Setup mock data
+    mock_response = {
+        "status": "active",
+        "violations": [{"id": "V-123", "type": "Safety", "severity": "High"}]
+    }
+    
+    # 2. Use the 'mocker' fixture (cleaner than 'with patch')
+    mock_get = mocker.patch("requests.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = mock_response
+    
+    # 3. Execution
+    from core.dob_engine import fetch_live_dob_alerts
+    result = fetch_live_dob_alerts({"bbl": "12345678"})
+    
+    assert len(result) == 1
