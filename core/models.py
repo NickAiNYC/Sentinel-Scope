@@ -1,13 +1,16 @@
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from typing import List, Optional
 from typing_extensions import Self
 
 class CaptureClassification(BaseModel):
     """Data structure for AI-tagged site images used for forensic evidence."""
+    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
+
     milestone: str = Field(..., description="NYC Construction Milestone (e.g., Fireproofing)")
     mep_system: Optional[str] = None
-    # Validates Floor 1, R (Roof), B (Basement), L (Lobby), M (Mezzanine), etc.
-    floor: str = Field(..., pattern=r"^[0-9RCBLM]+$") 
+    # Optimized pattern for 2025: Handles floors like PH (Penthouse), SC (Sub-cellar), 
+    # and standard 0-9RCBLM codes.
+    floor: str = Field(..., pattern=r"^[0-9RCBLMPHSC]+$") 
     zone: str = Field(..., description="Site quadrant or zone (e.g., North, Core, Hoist)")
     confidence: float = Field(..., ge=0, le=1) 
     compliance_relevance: int = Field(..., ge=1, le=5, description="1: Low Impact, 5: Life Safety/Critical")
@@ -36,19 +39,22 @@ class GapAnalysisResponse(BaseModel):
     @field_validator('compliance_score', 'risk_score')
     @classmethod
     def validate_scores(cls, v: int) -> int:
-        if not 0 <= v <= 100:
-            raise ValueError('Score must be between 0 and 100')
+        # Pydantic v2 handles the range check via Field(ge=0, le=100), 
+        # so this is now strictly for custom business logic if needed.
         return v
 
     @model_validator(mode='after')
     def check_score_logic(self) -> Self:
         """
         Ensures that compliance and risk scores stay logically aligned.
-        High compliance should generally correlate with lower risk.
+        If a 'Critical' gap exists, risk_score is elevated regardless of compliance %.
         """
-        # Allowing a small margin for weighted calculations used in gap_detector.py
-        if abs((self.compliance_score + self.risk_score) - 100) > 15: 
-            # Logic: If they drift too far apart, the risk_score is likely 
-            # being driven by an 'Immediately Hazardous' DOB Class C gap.
-            pass
+        has_critical = any(gap.risk_level == "Critical" for gap in self.missing_milestones)
+        
+        # Logic: If there is a critical safety gap, the risk score should reflect high risk
+        # even if 90% of other milestones are finished.
+        if has_critical and self.risk_score < 50:
+             # Auto-correct risk score to reflect life-safety priority
+             self.risk_score = max(self.risk_score, 75)
+             
         return self
