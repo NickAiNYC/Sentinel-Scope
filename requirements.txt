@@ -1,20 +1,20 @@
 # Core Web Framework & Data
-streamlit==1.32.0
-pandas==2.2.1
-plotly==5.19.0
-requests==2.31.0
+streamlit>=1.40.0
+pandas>=2.2.2
+plotly>=5.24.1
+requests>=2.32.3
 
 # AI & Geolocation
-openai>=1.12.0
-geopy==2.4.1
-pydantic>=2.0.0
-python-dotenv==1.0.1
+openai>=1.55.0
+geopy>=2.4.1
+pydantic>=2.9.0
+python-dotenv>=1.0.1
 
 # Reporting & Utilities
-fpdf==1.7.2
-Pillow==10.2.0
+fpdf2>=2.8.1
+Pillow>=10.4.0
 
 # Engineering Rigor
-ruff==0.3.0
-mypy==1.9.0
-pytest==8.1.1
+ruff>=0.6.0
+mypy>=1.11.0
+pytest>=8.3.0
