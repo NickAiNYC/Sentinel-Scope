@@ -1,16 +1,15 @@
 import streamlit as st
 import pandas as pd
-import requests
 from datetime import datetime
 from fpdf import FPDF
-from typing import Dict, List
+from typing import List
 
 # ====== CORE MODULE IMPORTS ======
 from core.constants import BRAND_THEME
 from core.geocoding import lookup_address
 from core.dob_engine import fetch_live_dob_alerts
-from core.gap_detector import ComplianceGapEngine # Updated to Class
-from core.processor import SentinelBatchProcessor   # New Batch Logic
+from core.gap_detector import ComplianceGapEngine
+from core.processor import SentinelBatchProcessor
 
 # ====== PDF GENERATION ENGINE ======
 class SentinelReport(FPDF):
@@ -27,50 +26,55 @@ class SentinelReport(FPDF):
 def create_pdf_report(p_name, address, analysis, findings: List):
     pdf = SentinelReport()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
     
-    # Project Summary
-    pdf.set_font("Arial", 'B', 14)
+    # Project Summary Header
+    pdf.set_font("Arial", 'B', 16)
+    pdf.set_text_color(139, 69, 19) # PRIMARY_BROWN
     pdf.cell(200, 10, txt=f"Project: {p_name}", ln=True)
+    
     pdf.set_font("Arial", size=10)
-    pdf.cell(200, 10, txt=f"Address: {address}", ln=True)
-    pdf.cell(200, 10, txt=f"Compliance Score: {analysis.compliance_score}%", ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(200, 7, txt=f"Address: {address}", ln=True)
+    pdf.cell(200, 7, txt=f"Compliance Score: {analysis.compliance_score}%", ln=True)
     pdf.ln(10)
     
     # Audit Table
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(200, 10, txt="Verified Evidence Logs", ln=True)
-    pdf.set_font("Arial", size=8)
     
     # Table Header
-    pdf.cell(60, 10, "Milestone", 1)
-    pdf.cell(60, 10, "Location", 1)
-    pdf.cell(40, 10, "AI Confidence", 1)
-    pdf.ln()
+    pdf.set_fill_color(245, 245, 220) # BACKGROUND_BEIGE
+    pdf.set_font("Arial", 'B', 9)
+    pdf.cell(40, 10, "Milestone", 1, 0, 'C', True)
+    pdf.cell(30, 10, "Location", 1, 0, 'C', True)
+    pdf.cell(25, 10, "Confidence", 1, 0, 'C', True)
+    pdf.cell(95, 10, "Forensic Evidence Notes", 1, 1, 'C', True)
     
-    # Table Content from live Batch Results
+    # Table Content
+    pdf.set_font("Arial", size=8)
     for res in findings:
-        pdf.cell(60, 10, str(res.milestone), 1)
-        pdf.cell(60, 10, f"Floor {res.floor} - {res.zone}", 1)
-        pdf.cell(40, 10, f"{res.confidence*100:.1f}%", 1)
-        pdf.ln()
+        # We use multi_cell for notes to allow text wrapping
+        start_y = pdf.get_y()
+        pdf.cell(40, 15, str(res.milestone), 1)
+        pdf.cell(30, 15, f"Floor {res.floor}", 1)
+        pdf.cell(25, 15, f"{res.confidence*100:.1f}%", 1)
+        
+        # Reset X to the notes column and use multi_cell
+        curr_x = pdf.get_x()
+        pdf.multi_cell(95, 5, res.evidence_notes, 1)
+        pdf.set_xy(curr_x + 95, start_y + 15) # Move to next row
+        pdf.ln(0)
         
     return pdf.output(dest='S').encode('latin-1')
 
-# ====== UI CONFIG ======
+# ====== UI CONFIG & SESSION STATE ======
 st.set_page_config(page_title="SentinelScope | AI Command Center", page_icon="🏗️", layout="wide")
 
-# Theme Injection
-st.markdown(f"""
-    <style>
-    .stApp {{ background-color: {BRAND_THEME['BACKGROUND_BEIGE']}; }}
-    [data-testid="stSidebar"] {{ background-color: {BRAND_THEME['SIDEBAR_TAN']}; }}
-    h1, h2, h3 {{ color: {BRAND_THEME['PRIMARY_BROWN']}; }}
-    .stButton>button {{ background-color: {BRAND_THEME['SADDLE_BROWN']}; color: white; border-radius: 8px; }}
-    </style>
-    """, unsafe_allow_html=True)
+# Persistent storage for audit results
+if 'audit_results' not in st.session_state:
+    st.session_state.audit_results = None
 
-# --- SIDEBAR & DATA LOADING ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/skyscraper.png", width=60)
     st.title("SentinelScope AI")
@@ -81,63 +85,61 @@ with st.sidebar:
         uploads = st.file_uploader("Upload Site Captures", accept_multiple_files=True)
         submit = st.form_submit_button("🚀 INITIALIZE AUDIT")
 
+# --- AUDIT LOGIC ---
 if submit and uploads:
-    # 1. Resolve Geo & Property Info
     geo_info = lookup_address(address)
     bbl = geo_info.get("bbl", "1012650001")
     
-    # 2. Parallel Processing with Live Visuals
     with st.status("🕵️ Running AI Visual Audit...", expanded=True) as status:
-        # Initialize the new engines
         gap_engine = ComplianceGapEngine(project_type=p_type.lower())
-        batch_processor = SentinelBatchProcessor(engine=gap_engine)
+        # Use st.secrets for the API key in production!
+        batch_processor = SentinelBatchProcessor(engine=gap_engine, api_key=st.secrets["DEEPSEEK_API_KEY"])
         
         st.write("Fetching NYC DOB data...")
         live_violations = fetch_live_dob_alerts({"bbl": bbl})
         
-        st.write("Processing image batch in parallel...")
-        # We pass the uploaded files directly to the processor
-        # Note: In production, use file paths; here we simulate with file names
-        analysis = batch_processor.run_audit([f.name for f in uploads])
+        st.write("Analyzing imagery...")
+        # CRITICAL: We process once and store the result objects
+        raw_findings = [batch_processor._process_single_image(f) for f in uploads]
         
-        # We also need the raw findings for the report table
-        # We'll re-run a quick mock of the results for the UI display
-        raw_findings = [batch_processor._process_single_image(f.name) for f in uploads]
+        # Run gap analysis on the detected milestones
+        found_milestones = list(set([f.milestone for f in raw_findings if f.milestone != "Unknown"]))
+        analysis = gap_engine.detect_gaps(found_milestones)
         
+        # Save to session state
+        st.session_state.audit_results = {
+            "analysis": analysis,
+            "raw_findings": raw_findings,
+            "geo_info": geo_info,
+            "live_violations": live_violations
+        }
         status.update(label="Audit Complete!", state="complete", expanded=False)
 
+# --- DASHBOARD DISPLAY ---
+if st.session_state.audit_results:
+    res = st.session_state.audit_results
     tab1, tab2, tab3 = st.tabs(["🏗️ Visual Progress", "🚨 DOB Compliance", "🛡️ Insurance Export"])
 
     with tab1:
-        st.header("Site Intelligence & Mapping")
-        map_data = pd.DataFrame({'lat': [geo_info['lat']], 'lon': [geo_info['lon']]})
-        st.map(map_data, zoom=15)
-        
-        col1, col2, col3 = st.columns([1.5, 1, 1])
+        col1, col2 = st.columns([2, 1])
         with col1:
-            # Show the first uploaded image as "Current Site View"
-            st.image(uploads[0], caption="Latest Site Capture", use_container_width=True)
+            st.header("Site Intelligence")
+            st.map(pd.DataFrame({'lat': [res['geo_info']['lat']], 'lon': [res['geo_info']['lon']]}), zoom=15)
         with col2:
-            st.metric("Compliance Score", f"{analysis.compliance_score}%")
-            st.metric("Missing Items", analysis.gap_count)
-        with col3:
-            st.metric("Risk Level", "HIGH" if analysis.risk_score > 30 else "LOW")
-            st.info(f"Priority: {analysis.next_priority}")
+            st.metric("Compliance Score", f"{res['analysis'].compliance_score}%")
+            st.metric("Missing Items", res['analysis'].gap_count)
+            st.info(f"Priority: {res['analysis'].next_priority}")
 
     with tab2:
-        st.header("NYC DOB Proactive Monitoring")
-        if live_violations:
-            st.error(f"🚨 {len(live_violations)} Live Violations Found at {address}")
-            st.write(live_violations)
+        if res['live_violations']:
+            st.error(f"🚨 {len(res['live_violations'])} Live Violations Found")
+            st.write(res['live_violations'])
         else:
             st.success("✅ No current violations found on BIS/DOB Now.")
 
     with tab3:
         st.header("Insurance Evidence Export")
-        st.info("Verified audit trail prepared for TCO (Temporary Certificate of Occupancy) support.")
-        
-        # Professional PDF Generator using live findings
-        pdf_bytes = create_pdf_report(p_name, address, analysis, raw_findings)
+        pdf_bytes = create_pdf_report(p_name, address, res['analysis'], res['raw_findings'])
         
         st.download_button(
             label="📄 Download Professional PDF Report",
@@ -145,11 +147,6 @@ if submit and uploads:
             file_name=f"SentinelReport_{p_name.replace(' ', '_')}.pdf",
             mime="application/pdf"
         )
-        
-        # Display the findings as a clean table
-        findings_df = pd.DataFrame([f.dict() for f in raw_findings])
-        st.table(findings_df[['milestone', 'floor', 'zone', 'confidence']])
-
+        st.table(pd.DataFrame([f.dict() for f in res['raw_findings']]))
 else:
-    st.title("SentinelScope AI Command Center")
-    st.info("Waiting for site data... Use the sidebar to upload project images and initialize the NYC DOB sync.")
+    st.info("Upload project images in the sidebar to begin.")
