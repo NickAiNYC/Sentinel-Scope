@@ -16,56 +16,50 @@ class SentinelBatchProcessor:
     def __init__(self, engine: ComplianceGapEngine, api_key: str, max_workers: int = 5):
         self.engine = engine
         self.max_workers = max_workers
-        # DeepSeek uses the OpenAI SDK format
         self.client = OpenAI(
             api_key=api_key, 
             base_url="https://api.deepseek.com"
         )
         
-        # The "NYC Senior Inspector" System Prompt
+        # Updated System Prompt to match the new CaptureClassification model
         self.system_prompt = """
         ACT AS: A Senior NYC Department of Buildings (DOB) Forensic Inspector.
         TASK: Analyze site imagery for NYC BC 2022 milestone verification.
         
         OUTPUT FORMAT: You must return ONLY a JSON object with these keys:
         1. "milestone": Choose one: [Foundation, Structural Steel, Fireproofing, MEP Rough-in, Enclosure].
-        2. "floor": Numeric string (e.g., "15").
-        3. "zone": Building sector (North, South, East, West, or Core).
-        4. "confidence": Float between 0.0 and 1.0.
-        5. "evidence_notes": A technical description of why this meets the milestone criteria.
+        2. "mep_system": If MEP, specify (HVAC, Sprinkler, Plumbing, Electrical). Otherwise, null.
+        3. "floor": Numeric string or code (e.g., "15", "R", "B", "L").
+        4. "zone": Building sector (North, South, East, West, Core, or Hoist).
+        5. "confidence": Float between 0.0 and 1.0.
+        6. "compliance_relevance": Integer 1-5 (5 = Critical Life Safety / Fireproofing).
+        7. "evidence_notes": A technical description of why this meets milestone criteria.
         
         FORENSIC RULES:
-        - Orange/Red spray on steel = Fireproofing.
-        - Exposed rebar + formwork = Foundation.
-        - Vertical I-beams without decks = Structural Steel.
-        - Visible ductwork/piping = MEP Rough-in.
-        - Glass/Curtain wall/Masonry = Enclosure.
+        - Orange/Red spray on steel = Fireproofing (Relevance: 5).
+        - Exposed rebar + formwork = Foundation (Relevance: 4).
+        - Vertical I-beams without decks = Structural Steel (Relevance: 4).
+        - Visible ductwork/piping = MEP Rough-in (Relevance: 3).
+        - Glass/Curtain wall/Masonry = Enclosure (Relevance: 3).
         """
 
     def _prepare_base64(self, file_source: Union[str, any]) -> str:
-        """
-        Handles image encoding for both local paths and Streamlit UploadedFile objects.
-        """
+        """Handles encoding for local paths and Streamlit UploadedFile objects."""
         try:
             if hasattr(file_source, 'read'):
-                # Streamlit UploadedFile (BytesIO)
                 file_source.seek(0)
                 return base64.b64encode(file_source.read()).decode('utf-8')
             
-            # Standard local file path
             with open(file_source, "rb") as image_file:
                 return base64.b64encode(image_file.read()).decode('utf-8')
         except Exception as e:
             raise IOError(f"Failed to encode image: {str(e)}")
 
     def _process_single_image(self, file_source: Union[str, any]) -> CaptureClassification:
-        """
-        Sends a single image to DeepSeek-V3 with specialized vision prompts.
-        """
+        """Sends image to DeepSeek and validates against CaptureClassification model."""
         try:
             base64_image = self._prepare_base64(file_source)
             
-            # Using deepseek-chat (unified text/vision model)
             response = self.client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[
@@ -82,44 +76,35 @@ class SentinelBatchProcessor:
                     }
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.1 # Low temperature for consistent forensic accuracy
+                temperature=0.1 
             )
 
-            # Parse JSON content from the AI response
-            raw_content = response.choices[0].message.content
-            ai_data = json.loads(raw_content)
+            ai_data = json.loads(response.choices[0].message.content)
             
+            # Map null mep_system if AI sends it as a string "null"
+            if ai_data.get("mep_system") == "null":
+                ai_data["mep_system"] = None
+
             return CaptureClassification(**ai_data)
         
         except Exception as e:
-            # Prevent the entire batch audit from crashing if one image fails
+            # Fallback to prevent crash, adhering to the regex and constraints of CaptureClassification
             return CaptureClassification(
                 milestone="Unknown",
-                floor="?",
-                zone="?",
+                mep_system=None,
+                floor="0",
+                zone="Unknown",
                 confidence=0.0,
+                compliance_relevance=1,
                 evidence_notes=f"Audit Interrupted: {str(e)}"
             )
 
     def run_audit(self, file_sources: List[Union[str, any]]) -> List[CaptureClassification]:
-        """
-        Executes parallel processing of multiple site captures.
-        Returns a list of individual image classifications.
-        """
+        """Processes multiple site captures in parallel."""
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            # Map the processing function across all uploaded files
             results = list(executor.map(self._process_single_image, file_sources))
-        
         return results
 
     def finalize_gap_analysis(self, findings: List[CaptureClassification]) -> GapAnalysisResponse:
-        """
-        Aggregates raw findings and passes them to the Compliance Engine for the final score.
-        """
-        # Extract unique milestones identified with at least 40% confidence
-        found_milestones = list(set([
-            res.milestone for res in findings 
-            if res.milestone != "Unknown" and res.confidence > 0.4
-        ]))
-        
-        return self.engine.detect_gaps(found_milestones)
+        """Passes findings to the engine for score and gap mapping."""
+        return self.engine.detect_gaps(findings)
