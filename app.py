@@ -20,6 +20,7 @@ try:
     from core.processor import SentinelBatchProcessor
 except ImportError as e:
     st.error(f"Critical Import Error: {e}")
+    st.info("Check that core/__init__.py exists and class names match exactly.")
     st.stop()
 
 # ====== PDF GENERATION ENGINE ======
@@ -72,13 +73,11 @@ def create_pdf_report(p_name, address, analysis, findings: List):
     # Findings Data
     pdf.set_font("Arial", size=8)
     for res in findings:
-        # Wrap notes to prevent table breakage
         pdf.cell(40, 15, str(res.milestone), 1)
         pdf.cell(20, 15, f"FL {res.floor}", 1)
         pdf.cell(20, 15, f"{res.confidence*100:.0f}%", 1)
         pdf.multi_cell(110, 5, res.evidence_notes, 1)
         
-    # Using bytearray for fpdf2 compatibility
     return bytes(pdf.output())
 
 # ====== UI CONFIG & THEME ======
@@ -122,19 +121,21 @@ if submit and uploads:
     bbl = geo_info.get("bbl", "1012650001")
     
     with st.status("🕵️ Running AI Visual Audit...", expanded=True) as status:
+        # 1. Initialize Engines
         gap_engine = ComplianceGapEngine(project_type=p_type.lower())
         batch_processor = SentinelBatchProcessor(engine=gap_engine, api_key=api_key)
         
+        # 2. Pull NYC DOB Records (Static call to class)
         st.write("🛰️ Pulling NYC DOB Records...")
-        # INITIALIZING THE CLASS
-        dob_engine = DOBEngine()
-        live_violations = dob_engine.get_alerts(bbl)
+        live_violations = DOBEngine.fetch_live_dob_alerts({"bbl": bbl})
         
+        # 3. Parallel Image Analysis
         st.write("👁️ Analyzing Visual Compliance...")
-        raw_findings = [batch_processor._process_single_image(f) for f in uploads]
+        raw_findings = batch_processor.run_audit(uploads)
         
-        found_milestones = list(set([f.milestone for f in raw_findings if f.milestone != "Unknown"]))
-        analysis = gap_engine.detect_gaps(found_milestones)
+        # 4. Final Gap Analysis (Passes client for DeepSeek remediation reasoning)
+        st.write("📊 Calculating NYC BC 2022 Gaps...")
+        analysis = batch_processor.finalize_gap_analysis(raw_findings)
         
         st.session_state.audit_results = {
             "analysis": analysis,
@@ -149,11 +150,10 @@ if submit and uploads:
 if st.session_state.audit_results:
     res = st.session_state.audit_results
     
-    # Summary Metrics Row
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Compliance Score", f"{res['analysis'].compliance_score}%")
-    c2.metric("Risk Score", res['analysis'].risk_score)
-    c3.metric("Detected Milestones", len(set([f.milestone for f in res['raw_findings']])))
+    c2.metric("Risk Score", f"{res['analysis'].risk_score}/100")
+    c3.metric("Detected Milestones", res['total_found'] if 'total_found' in res else len(res['raw_findings']))
     c4.metric("BBL Number", res['geo_info'].get('bbl', 'N/A'))
 
     tab1, tab2, tab3 = st.tabs(["🏗️ Visual Audit", "🚨 NYC DOB Sync", "🛡️ Evidence Export"])
@@ -189,17 +189,12 @@ if st.session_state.audit_results:
             mime="application/pdf"
         )
         
-        # Evidence Table
-        st.subheader("Raw AI Evidence Trace")
-        findings_data = []
-        for f in res['raw_findings']:
-            findings_data.append({
-                "Milestone": f.milestone,
-                "Floor": f.floor,
-                "Confidence": f"{f.confidence*100:.1f}%",
-                "Evidence Notes": f.evidence_notes
-            })
-        st.table(pd.DataFrame(findings_data))
+        st.subheader("Compliance Remediation Plan")
+        for gap in res['analysis'].missing_milestones:
+            with st.expander(f"❌ Missing: {gap.milestone} ({gap.dob_code})"):
+                st.write(f"**Risk Level:** {gap.risk_level}")
+                st.write(f"**AI Recommendation:** {gap.recommendation}")
+
 else:
     st.title("SentinelScope AI Command Center")
     st.info("Ready for Audit. Please upload site imagery via the sidebar to begin.")
