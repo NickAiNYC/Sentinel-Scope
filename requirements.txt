@@ -1,22 +1,22 @@
-# Core Web Framework & Data
+# --- Core Web Framework & Data ---
 streamlit>=1.52.0
-pandas>=2.2.3
+pandas>=2.3.3
 plotly>=6.0.0
 requests>=2.32.3
 
-# AI & Geolocation
-openai>=1.58.0
-anthropic>=0.42.0
-rapidfuzz>=3.11.0
+# --- AI & Geolocation ---
+openai>=2.14.0
+anthropic>=0.75.0
+rapidfuzz>=3.14.3
 geopy>=2.4.1
-pydantic>=2.10.0
+pydantic>=2.12.5
 python-dotenv>=1.0.1
 
-# Reporting & Utilities
+# --- Reporting & Utilities ---
 fpdf2>=2.8.2
 Pillow>=11.0.0
 
-# Engineering Rigor (Dev Dependencies)
+# --- Engineering Rigor (Dev Dependencies) ---
 ruff>=0.8.0
 mypy>=1.14.0
 pytest>=8.3.4
