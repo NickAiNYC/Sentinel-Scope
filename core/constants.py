@@ -1,25 +1,26 @@
 """
-SentinelScope Constants
-Hard-coded domain knowledge for NYC Building Code (BC) 2022.
-Integrated with Architectural Earth-Tone Design Tokens.
+SentinelScope Constants v2025.12
+Hard-coded domain knowledge for NYC Building Code (BC) 2022 + EBC 2025.
+Integrated with 2025 Architectural Earth-Tone Design Tokens.
 """
 
-# --- UI DESIGN TOKENS (Architectural Earth-Tone Palette) ---
+# --- UI DESIGN TOKENS (2025 Architectural Palette) ---
+# Updated to include "True Joy" accents and modern earth tones
 BRAND_THEME = {
-    "BACKGROUND_BEIGE": "#F5F5DD",  # Main app background
-    "SIDEBAR_TAN": "#D2B48C",       # Sidebar and secondary panels
-    "PRIMARY_BROWN": "#5C4033",     # Deep coffee (Main headers/buttons)
-    "SADDLE_BROWN": "#8B4513",      # Accents and icons
-    "MAHOGANY": "#4E2C23",          # Progress bars and gauges
-    "SUCCESS_GREEN": "#4F7942",     # Sage green for compliance
-    "DANGER_RUST": "#8B0000",       # Dark rust for violations
-    "WARNING_AMBER": "#B8860B",     # Dark goldenrod for warnings
+    "BACKGROUND_BEIGE": "#F5F5DD",  # Bone/Parchment
+    "SIDEBAR_TAN": "#D2B48C",       # Raw Sienna
+    "PRIMARY_BROWN": "#5C4033",      # Deep Espresso
+    "SADDLE_BROWN": "#8B4513",       # Rust Oxide
+    "MAHOGANY": "#4E2C23",           # Burnt Umber
+    "SUCCESS_GREEN": "#4F7942",      # Sage/Olive (Biophilic)
+    "DANGER_RUST": "#8B0000",        # Deep Hematite
+    "WARNING_AMBER": "#FFBF00",      # Amber/True Joy (High Visibility)
 }
 
-# --- NYC GEOGRAPHY ---
+# --- NYC GEOGRAPHY & JURISDICTION ---
 BOROUGHS = ["MANHATTAN", "BROOKLYN", "QUEENS", "BRONX", "STATEN ISLAND"]
 
-# --- NYC BUILDING CODE 2022 REFERENCES ---
+# --- NYC BUILDING CODE 2022 & 2025 UPDATES ---
 NYC_BC_REFS = {
     "STRUCTURAL": {
         "CHAPTER": "BC Chapter 16",
@@ -35,12 +36,14 @@ NYC_BC_REFS = {
     "MEP": {
         "MECHANICAL": "NYC Mechanical Code Chapter 6",
         "PLUMBING": "NYC Plumbing Code Chapter 7",
-        "FUEL_GAS": "NYC Fuel Gas Code Chapter 4"
+        "ELECTRICAL": "NYC Electrical Code (Effective 12/21/2025)"
     },
-    "SITE_SAFETY": "BC Chapter 33"
+    "SITE_SAFETY": "BC Chapter 33",
+    "EXISTING_BUILDING": "NYC EBC (Effective 11/07/2025)", # New 2025 Code
+    "PARAPETS": "1 RCNY 103-15 (Annual Inspection Rule)" # New 2024/25 Rule
 }
 
-# --- CONSTRUCTION MILESTONES ---
+# --- CONSTRUCTION MILESTONES (Phase-Specific) ---
 MILESTONES = {
     "EXCAVATION": "Foundation & Earthwork",
     "SUPERSTRUCTURE": "Structural Frame / Superstructure",
@@ -50,22 +53,25 @@ MILESTONES = {
     "TOP_OUT": "Roofing & Mechanical Bulkhead"
 }
 
-# --- DOB VIOLATION SEVERITY ---
+# --- DOB VIOLATION SEVERITY (Reflecting 2025 Enforcement) ---
 VIOLATION_LEVELS = {
-    "VWH": "CRITICAL",  # Violation - Work Without Permit Hazardous
+    "VWH": "CRITICAL",  # Work Without Permit Hazardous
     "VH":  "HIGH",      # Violation Hazardous
-    "VW":  "MEDIUM",    # Violation - Work Without Permit
-    "ZV":  "LOW"        # Zoning Violation
+    "VW":  "MEDIUM",    # Work Without Permit
+    "ZV":  "LOW",       # Zoning Violation
+    "AEU": "HIGH"       # Failed Annual Inspection (New for 2025)
 }
 
-# --- COMPLIANCE SCORING ---
+# --- COMPLIANCE SCORING WEIGHTS ---
 SCORING_WEIGHTS = {
-    "LIFE_SAFETY": 0.40,
-    "STRUCTURAL": 0.35,
-    "ENVIRONMENTAL": 0.15,
-    "ADMINISTRATIVE": 0.10
+    "LIFE_SAFETY": 0.40,      # Chapter 33 Site Safety
+    "STRUCTURAL": 0.35,       # Foundations/Steel/Concrete
+    "ENERGY_EFFICIENCY": 0.15, # Local Law 97/33 (2025 Penalties)
+    "ADMINISTRATIVE": 0.10     # Permits/Filing
 }
 
-# --- AI AGENT DEFAULTS ---
-DEFAULT_MODEL = "deepseek-v3-vision"
-DEFAULT_CONFIDENCE_THRESHOLD = 0.75
+# --- AI AGENT DEFAULTS (Late 2025 Standard) ---
+# DeepSeek-V3.2 is the successor to V3 and provides SOTA reasoning-first vision
+DEFAULT_MODEL = "deepseek-v3.2" 
+REASONING_MODEL = "claude-4.5-sonnet" # Best-in-class for multi-step NYC code reasoning
+DEFAULT_CONFIDENCE_THRESHOLD = 0.80 # Tightened for 2025 safety standards
