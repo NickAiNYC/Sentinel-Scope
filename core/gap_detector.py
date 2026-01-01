@@ -11,7 +11,25 @@ from functools import lru_cache
 import time
 from core.models import GapAnalysisResponse, ComplianceGap, CaptureClassification
 from core.constants import NYC_BC_REFS
+import pytest
 
+from core.gap_detector import ComplianceGapEngine
+from core.models import GapAnalysisResponse
+
+
+# 🏗️ FIXTURE: Shared engine setup
+@pytest.fixture
+def structural_engine():
+    return ComplianceGapEngine(project_type="structural", fuzzy_threshold=85)
+
+
+# ✅ TEST: Partial Milestone Detection
+def test_detect_gaps_partial_completion(structural_engine):
+    """
+    Checks that only finding 'Foundation' triggers
+    a missing 'Structural Steel' gap.
+    """
+    found_milestones = ["Foundation"]
 
 class ComplianceGapEngine:
     """
