@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 from fpdf import FPDF
 from typing import List, Union
+from openai import OpenAI
 
 # ====== STREAMLIT CLOUD PATH FIX ======
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -21,6 +22,65 @@ try:
 except ImportError as e:
     st.error(f"Critical Import Error: {e}. Check your folder structure.")
     st.stop()
+
+# ====== AI CHATBOT ASSISTANT ======
+class ComplianceAssistant:
+    """AI chatbot for NYC Building Code questions."""
+    
+    SYSTEM_PROMPT = """You are a NYC Building Code compliance expert for SentinelScope.
+    
+Your role:
+- Answer questions about NYC Building Code 2022/2025
+- Provide specific code references (e.g., BC 3301.1)
+- Explain inspection requirements
+- Suggest remediation steps for violations
+- Clarify DOB filing procedures
+
+Guidelines:
+- Be concise and actionable (2-3 paragraphs max)
+- Always cite specific code sections when possible
+- If unsure, recommend consulting a licensed professional
+- Focus on practical construction site scenarios
+- Mention safety considerations when relevant"""
+    
+    def __init__(self, api_key: str):
+        self.client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+        self.conversation = []
+    
+    def ask(self, question: str, context: dict = None) -> str:
+        """Ask compliance question with optional project context."""
+        user_msg = question
+        if context:
+            user_msg = f"""Project Context:
+- Name: {context.get('name', 'N/A')}
+- Type: {context.get('type', 'N/A')}
+- Compliance Score: {context.get('compliance_score', 'N/A')}%
+- Active Gaps: {context.get('gap_count', 0)}
+
+Question: {question}"""
+        
+        self.conversation.append({"role": "user", "content": user_msg})
+        
+        try:
+            response = self.client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": self.SYSTEM_PROMPT},
+                    *self.conversation
+                ],
+                max_tokens=800,
+                temperature=0.3
+            )
+            
+            answer = response.choices[0].message.content
+            self.conversation.append({"role": "assistant", "content": answer})
+            return answer
+        except Exception as e:
+            return f"⚠️ Error: {str(e)}"
+    
+    def reset(self):
+        """Clear conversation history."""
+        self.conversation = []
 
 # ====== PDF GENERATION ENGINE ======
 class SentinelReport(FPDF):
@@ -167,6 +227,19 @@ st.markdown("""
     .stAlert {
         border-radius: 10px;
     }
+    .chat-message {
+        padding: 10px;
+        border-radius: 8px;
+        margin: 5px 0;
+    }
+    .user-message {
+        background-color: #e3f2fd;
+        margin-left: 20px;
+    }
+    .assistant-message {
+        background-color: #f5f5f5;
+        margin-right: 20px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -175,12 +248,16 @@ if 'audit_results' not in st.session_state:
     st.session_state.audit_results = None
 if 'usage_history' not in st.session_state:
     st.session_state.usage_history = []
+if 'chat_messages' not in st.session_state:
+    st.session_state.chat_messages = []
+if 'assistant' not in st.session_state:
+    st.session_state.assistant = None
 
 # --- SIDEBAR ---
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/skyscraper.png", width=70)
     st.title("SentinelScope AI")
-    st.caption("Forensic Site Analysis Engine v2.7")
+    st.caption("Forensic Site Analysis Engine v2.8")
     st.markdown("---")
     
     # API Key handling - check secrets first, then allow manual input
@@ -230,6 +307,75 @@ with st.sidebar:
             if st.button("Clear History"):
                 st.session_state.usage_history = []
                 st.rerun()
+    
+    st.markdown("---")
+    
+    # AI Chatbot Toggle
+    if st.checkbox("💬 Compliance Assistant", key="chatbot_toggle"):
+        st.markdown("**Ask Building Code Questions**")
+        
+        # Initialize assistant
+        if api_key and st.session_state.assistant is None:
+            st.session_state.assistant = ComplianceAssistant(api_key)
+        
+        if api_key and st.session_state.assistant:
+            # Display recent messages (last 3)
+            recent_msgs = st.session_state.chat_messages[-3:] if len(st.session_state.chat_messages) > 0 else []
+            for msg in recent_msgs:
+                if msg['role'] == 'user':
+                    st.markdown(f"**You:** {msg['content'][:50]}...")
+                else:
+                    st.markdown(f"**🤖:** {msg['content'][:50]}...")
+            
+            # Chat input
+            question = st.text_input(
+                "Ask a question:",
+                key="chat_input",
+                placeholder="e.g., What's required for fireproofing?"
+            )
+            
+            col_ask, col_clear = st.columns([2, 1])
+            
+            with col_ask:
+                if st.button("Ask", use_container_width=True):
+                    if question:
+                        # Get context from current audit
+                        context = None
+                        if st.session_state.audit_results:
+                            res = st.session_state.audit_results
+                            context = {
+                                'name': res['meta']['name'],
+                                'type': res['meta']['project_type'],
+                                'compliance_score': res['analysis'].compliance_score,
+                                'gap_count': res['analysis'].gap_count
+                            }
+                        
+                        # Get answer
+                        answer = st.session_state.assistant.ask(question, context)
+                        
+                        # Update history
+                        st.session_state.chat_messages.append({
+                            'role': 'user',
+                            'content': question
+                        })
+                        st.session_state.chat_messages.append({
+                            'role': 'assistant',
+                            'content': answer
+                        })
+                        
+                        st.rerun()
+            
+            with col_clear:
+                if st.button("Clear", use_container_width=True):
+                    st.session_state.chat_messages = []
+                    if st.session_state.assistant:
+                        st.session_state.assistant.reset()
+                    st.rerun()
+            
+            if len(st.session_state.chat_messages) > 3:
+                st.caption(f"💬 {len(st.session_state.chat_messages)} total messages")
+        else:
+            st.warning("Add API key to enable chatbot")
     
     st.markdown("---")
     
@@ -308,7 +454,8 @@ if submit and uploads:
                     "uploads": uploads,
                     "project_type": p_type,
                     "fuzzy_threshold": fuzzy_threshold,
-                    "batch_mode": use_batch
+                    "batch_mode": use_batch,
+                    "timestamp": datetime.now().isoformat()
                 }
             }
             
@@ -378,11 +525,12 @@ if st.session_state.audit_results:
     st.markdown("---")
     
     # Tabbed Interface
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🏗️ SPATIAL AUDIT", 
         "📋 COMPLIANCE GAPS", 
         "🚨 DOB VIOLATIONS", 
-        "🛡️ EXPORT LOGS"
+        "🛡️ EXPORT LOGS",
+        "💬 ASK ASSISTANT"
     ])
 
     with tab1:
@@ -503,6 +651,7 @@ if st.session_state.audit_results:
             st.write(f"**Images Analyzed:** {len(res['meta']['uploads'])}")
             st.write(f"**AI Model:** {usage_stats.get('model', 'N/A')}")
             st.write(f"**Tokens Used:** {usage_stats.get('total_tokens', 0):,}")
+            st.write(f"**Audit Timestamp:** {res['meta'].get('timestamp', 'N/A')}")
         
         st.markdown("---")
         st.button(
@@ -510,6 +659,86 @@ if st.session_state.audit_results:
             on_click=lambda: st.session_state.update(audit_results=None),
             use_container_width=True
         )
+    
+    with tab5:
+        st.subheader("💬 AI Compliance Assistant")
+        
+        if not api_key:
+            st.warning("⚠️ API key required to use the assistant")
+        else:
+            # Initialize assistant if not exists
+            if st.session_state.assistant is None:
+                st.session_state.assistant = ComplianceAssistant(api_key)
+            
+            st.info("**💡 Pro Tip:** Ask about specific gaps from your audit or general Building Code questions")
+            
+            # Display full chat history
+            for msg in st.session_state.chat_messages:
+                if msg['role'] == 'user':
+                    with st.chat_message("user"):
+                        st.write(msg['content'])
+                else:
+                    with st.chat_message("assistant", avatar="🏗️"):
+                        st.write(msg['content'])
+            
+            # Chat input
+            if prompt := st.chat_input("Ask about NYC Building Code compliance..."):
+                # Display user message
+                with st.chat_message("user"):
+                    st.write(prompt)
+                
+                # Get project context
+                context = {
+                    'name': res['meta']['name'],
+                    'type': res['meta']['project_type'],
+                    'compliance_score': analysis.compliance_score,
+                    'gap_count': analysis.gap_count
+                }
+                
+                # Get assistant response
+                with st.chat_message("assistant", avatar="🏗️"):
+                    with st.spinner("Thinking..."):
+                        response = st.session_state.assistant.ask(prompt, context)
+                        st.write(response)
+                
+                # Save to history
+                st.session_state.chat_messages.append({"role": "user", "content": prompt})
+                st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                
+                st.rerun()
+            
+            # Quick question buttons
+            st.markdown("**Quick Questions:**")
+            col_q1, col_q2, col_q3 = st.columns(3)
+            
+            if col_q1.button("📋 Explain my gaps"):
+                if analysis.missing_milestones:
+                    gaps_list = ", ".join([g.milestone for g in analysis.missing_milestones])
+                    quick_q = f"Explain these compliance gaps and prioritize them: {gaps_list}"
+                    st.session_state.chat_messages.append({"role": "user", "content": quick_q})
+                    context = {'name': res['meta']['name'], 'type': res['meta']['project_type'], 
+                              'compliance_score': analysis.compliance_score, 'gap_count': analysis.gap_count}
+                    response = st.session_state.assistant.ask(quick_q, context)
+                    st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                    st.rerun()
+            
+            if col_q2.button("⏰ What are deadlines?"):
+                quick_q = "What are typical inspection deadlines for my project type?"
+                st.session_state.chat_messages.append({"role": "user", "content": quick_q})
+                context = {'name': res['meta']['name'], 'type': res['meta']['project_type'], 
+                          'compliance_score': analysis.compliance_score, 'gap_count': analysis.gap_count}
+                response = st.session_state.assistant.ask(quick_q, context)
+                st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                st.rerun()
+            
+            if col_q3.button("📞 Who to contact?"):
+                quick_q = "Who should I contact at NYC DOB for my compliance issues?"
+                st.session_state.chat_messages.append({"role": "user", "content": quick_q})
+                context = {'name': res['meta']['name'], 'type': res['meta']['project_type'], 
+                          'compliance_score': analysis.compliance_score, 'gap_count': analysis.gap_count}
+                response = st.session_state.assistant.ask(quick_q, context)
+                st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                st.rerun()
 
 else:
     # Welcome Screen
@@ -523,12 +752,14 @@ else:
     - 🔍 Fuzzy matching for intelligent milestone recognition
     - 📊 Real-time DOB violation tracking
     - 📄 Professional forensic PDF reports
+    - 💬 **NEW:** AI Compliance Assistant for instant answers
     
     #### Quick Start:
     1. 👈 Configure your audit in the sidebar
     2. 📤 Upload construction site photos
     3. 🚀 Initialize the AI audit
     4. 📊 Review compliance gaps and export reports
+    5. 💬 Ask the AI assistant any compliance questions
     
     ---
     *Powered by DeepSeek-V3 • RapidFuzz • NYC Open Data*
@@ -541,3 +772,27 @@ else:
     col3.metric("Compliance Accuracy", "94%")
     
     st.info("👈 **Use the sidebar to upload site captures and begin your first forensic audit.**")
+    
+    # Feature highlights
+    st.markdown("---")
+    st.subheader("✨ New Features in v2.8")
+    
+    feat1, feat2 = st.columns(2)
+    
+    with feat1:
+        st.markdown("""
+        **💬 AI Compliance Assistant**
+        - Ask questions about Building Code
+        - Get instant remediation advice
+        - Context-aware responses based on your audit
+        - Quick question templates
+        """)
+    
+    with feat2:
+        st.markdown("""
+        **📊 Enhanced Analytics**
+        - Detailed usage tracking
+        - Cost optimization with batch processing
+        - Comprehensive audit metadata
+        - Professional PDF reports
+        """)
