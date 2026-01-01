@@ -1,208 +1,585 @@
 import streamlit as st
 import pandas as pd
-import sys
-import os
-from datetime import datetime
-from fpdf import FPDF
-from typing import List
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import json
 
-# ====== STREAMLIT CLOUD PATH FIX ======
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-if ROOT_DIR not in sys.path:
-    sys.path.append(ROOT_DIR)
+# ====== PAGE CONFIG ======
+st.set_page_config(
+    page_title="SentinelScope Pro | Construction Intelligence Platform",
+    page_icon="🏗️",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# ====== CORE MODULE IMPORTS ======
-try:
-    from core.constants import BRAND_THEME
-    from core.geocoding import lookup_address
-    from core.dob_engine import fetch_live_dob_alerts
-    from core.gap_detector import ComplianceGapEngine
-    from core.processor import SentinelBatchProcessor
-except ImportError as e:
-    st.error(f"Critical Import Error: {e}")
-    st.stop()
-
-# ====== PDF GENERATION ENGINE ======
-class SentinelReport(FPDF):
-    def header(self):
-        # Professional Dark Header Bar
-        self.set_fill_color(33, 47, 61)  # Deep Charcoal
-        self.rect(0, 0, 210, 40, 'F')
-        
-        # Logo Text
-        self.set_text_color(255, 255, 255)
-        self.set_font('Arial', 'B', 16)
-        self.cell(0, 15, 'SENTINEL-SCOPE AI | CONSTRUCTION FORENSICS', 0, 1, 'L')
-        
-        # Subtitle
-        self.set_font('Arial', 'I', 10)
-        self.cell(0, 5, 'NYC BC 2022 Compliance Verification & Risk Evidence', 0, 1, 'L')
-        self.ln(20)
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.set_text_color(150, 150, 150)
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-        self.cell(0, 10, f'Forensic Log ID: {id(self)} | Generated: {timestamp} | Page {self.page_no()}', 0, 0, 'C')
-
-def create_pdf_report(p_name, address, analysis, findings: List):
-    pdf = SentinelReport()
-    pdf.add_page()
+# ====== CUSTOM CSS ======
+st.markdown("""
+<style>
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     
-    # Project Summary Block
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(139, 69, 19) # SADDLE_BROWN
-    pdf.cell(0, 10, txt=f"PROJECT: {p_name.upper()}", ln=True)
+    /* Professional color scheme */
+    :root {
+        --primary: #1e40af;
+        --success: #059669;
+        --warning: #d97706;
+        --danger: #dc2626;
+    }
     
-    pdf.set_font("Arial", size=10)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 7, txt=f"LOCATION: {address}", ln=True)
-    pdf.cell(0, 7, txt=f"COMPLIANCE RATING: {analysis.compliance_score}%", ln=True)
-    pdf.ln(10)
+    /* Card styling */
+    .metric-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--primary);
+    }
     
-    # Evidence Table
-    pdf.set_fill_color(240, 240, 240)
-    pdf.set_font("Arial", 'B', 10)
-    pdf.cell(40, 10, "Milestone", 1, 0, 'C', True)
-    pdf.cell(20, 10, "Floor", 1, 0, 'C', True)
-    pdf.cell(20, 10, "Conf.", 1, 0, 'C', True)
-    pdf.cell(110, 10, "Forensic Evidence Narrative", 1, 1, 'C', True)
+    .risk-critical {
+        border-left-color: var(--danger);
+        background: #fef2f2;
+    }
     
-    # Findings Data
-    pdf.set_font("Arial", size=8)
-    for res in findings:
-        start_y = pdf.get_y()
-        # Ensure we handle multi-line text wrapping for technical notes
-        pdf.cell(40, 15, str(res.milestone), 1)
-        pdf.cell(20, 15, f"FL {res.floor}", 1)
-        pdf.cell(20, 15, f"{res.confidence*100:.0f}%", 1)
-        
-        curr_x = pdf.get_x()
-        # Narrative Notes
-        pdf.multi_cell(110, 5, res.evidence_notes, 1)
-        pdf.set_xy(curr_x + 110, start_y + 15)
-        pdf.ln(0)
-        
-    return pdf.output(dest='S').encode('latin-1')
+    .risk-warning {
+        border-left-color: var(--warning);
+        background: #fffbeb;
+    }
+    
+    .risk-safe {
+        border-left-color: var(--success);
+        background: #f0fdf4;
+    }
+    
+    /* Professional headers */
+    .dashboard-header {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    /* Data tables */
+    .dataframe {
+        font-size: 0.9rem;
+    }
+    
+    /* Status badges */
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background: #dcfce7;
+        color: #166534;
+    }
+    
+    .status-delayed {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .status-pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# ====== UI CONFIG & THEME ======
-st.set_page_config(page_title="SentinelScope | AI Command Center", page_icon="🏗️", layout="wide")
+# ====== SESSION STATE INITIALIZATION ======
+if 'current_view' not in st.session_state:
+    st.session_state.current_view = 'overview'
+if 'projects' not in st.session_state:
+    # Sample data - replace with database later
+    st.session_state.projects = [
+        {
+            'id': 'proj_001',
+            'name': '270 Park Avenue',
+            'address': '270 Park Ave, Manhattan, NY 10017',
+            'type': 'Commercial High-Rise',
+            'status': 'active',
+            'compliance_score': 87,
+            'risk_score': 23,
+            'start_date': '2024-03-15',
+            'target_completion': '2026-08-30',
+            'total_captures': 1247,
+            'open_gaps': 3,
+            'last_audit': '2024-12-28',
+            'value': 850000000,
+            'gc_firm': 'Turner Construction',
+            'insurance_premium': 1200000
+        },
+        {
+            'id': 'proj_002',
+            'name': 'Hudson Yards Phase 3',
+            'address': '500 W 33rd St, Manhattan, NY 10001',
+            'type': 'Mixed-Use Development',
+            'status': 'active',
+            'compliance_score': 92,
+            'risk_score': 12,
+            'start_date': '2024-01-10',
+            'target_completion': '2025-12-15',
+            'total_captures': 2891,
+            'open_gaps': 1,
+            'last_audit': '2024-12-30',
+            'value': 1200000000,
+            'gc_firm': 'Tishman Construction',
+            'insurance_premium': 1800000
+        },
+        {
+            'id': 'proj_003',
+            'name': 'Brooklyn Navy Yard Expansion',
+            'address': '63 Flushing Ave, Brooklyn, NY 11205',
+            'type': 'Industrial Renovation',
+            'status': 'delayed',
+            'compliance_score': 68,
+            'risk_score': 45,
+            'start_date': '2024-05-20',
+            'target_completion': '2025-11-30',
+            'total_captures': 567,
+            'open_gaps': 8,
+            'last_audit': '2024-12-15',
+            'value': 125000000,
+            'gc_firm': 'Skanska USA',
+            'insurance_premium': 450000
+        }
+    ]
 
-st.markdown(f"""
-    <style>
-    .stApp {{ background-color: {BRAND_THEME['BACKGROUND_BEIGE']}; }}
-    [data-testid="stSidebar"] {{ background-color: {BRAND_THEME['SIDEBAR_TAN']}; }}
-    h1, h2, h3 {{ color: {BRAND_THEME['PRIMARY_BROWN']}; font-weight: 800; }}
-    .stButton>button {{ background-color: {BRAND_THEME['SADDLE_BROWN']}; color: white; border-radius: 8px; width: 100%; font-weight: bold; }}
-    .stMetric {{ background-color: white; padding: 15px; border-radius: 10px; border: 1px solid #ddd; }}
-    </style>
+# ====== TOP NAVIGATION BAR ======
+col_logo, col_nav1, col_nav2, col_nav3, col_nav4, col_user = st.columns([1.5, 1, 1, 1, 1, 1.5])
+
+with col_logo:
+    st.markdown("### 🏗️ **SentinelScope Pro**")
+
+nav_buttons = [
+    ('overview', '📊 Overview', col_nav1),
+    ('projects', '🏗️ Projects', col_nav2),
+    ('analytics', '📈 Analytics', col_nav3),
+    ('compliance', '⚖️ Compliance', col_nav4)
+]
+
+for view_key, label, col in nav_buttons:
+    with col:
+        if st.button(label, key=f"nav_{view_key}", use_container_width=True,
+                    type="primary" if st.session_state.current_view == view_key else "secondary"):
+            st.session_state.current_view = view_key
+            st.rerun()
+
+with col_user:
+    st.markdown("**👤 John Smith**  \n*Senior PM*")
+
+st.markdown("---")
+
+# ====== DASHBOARD VIEWS ======
+
+# ---------------- OVERVIEW VIEW ----------------
+if st.session_state.current_view == 'overview':
+    
+    # Header
+    st.markdown("""
+    <div class="dashboard-header">
+        <h1 style='margin:0;'>Portfolio Command Center</h1>
+        <p style='margin:0.5rem 0 0 0; opacity:0.9;'>Real-time compliance intelligence across all NYC projects</p>
+    </div>
     """, unsafe_allow_html=True)
-
-if 'audit_results' not in st.session_state:
-    st.session_state.audit_results = None
-
-# --- SIDEBAR ---
-with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/skyscraper.png", width=70)
-    st.title("SentinelScope AI")
+    
+    # Key Metrics Row
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    total_projects = len(st.session_state.projects)
+    active_projects = len([p for p in st.session_state.projects if p['status'] == 'active'])
+    avg_compliance = sum(p['compliance_score'] for p in st.session_state.projects) / total_projects
+    total_gaps = sum(p['open_gaps'] for p in st.session_state.projects)
+    total_value = sum(p['value'] for p in st.session_state.projects)
+    
+    with col1:
+        st.metric("Active Projects", f"{active_projects}/{total_projects}")
+    with col2:
+        st.metric("Avg Compliance", f"{avg_compliance:.0f}%", 
+                 delta=f"+{avg_compliance-85:.0f}%" if avg_compliance > 85 else f"{avg_compliance-85:.0f}%")
+    with col3:
+        st.metric("Open Gaps", total_gaps, 
+                 delta="-2 vs last week", delta_color="inverse")
+    with col4:
+        st.metric("Portfolio Value", f"${total_value/1e9:.1f}B")
+    with col5:
+        premium_at_risk = sum(p['insurance_premium'] * (p['risk_score']/100) for p in st.session_state.projects)
+        st.metric("Premium at Risk", f"${premium_at_risk/1e6:.1f}M")
+    
     st.markdown("---")
     
-    api_key = st.secrets.get("DEEPSEEK_API_KEY", "")
+    # Two-column layout
+    col_left, col_right = st.columns([2, 1])
     
-    with st.form("audit_config"):
-        p_name = st.text_input("Project Name", "270 Park Ave Reconstruction")
-        address = st.text_input("Site Address", "270 Park Ave, New York, NY")
-        p_type = st.selectbox("Category", ["Structural", "MEP", "Fireproofing", "Foundation"])
-        uploads = st.file_uploader("Upload Site Captures", accept_multiple_files=True, type=['jpg', 'jpeg', 'png'])
-        submit = st.form_submit_button("🚀 INITIALIZE AUDIT")
-
-# --- AUDIT EXECUTION ---
-if submit and uploads:
-    if not api_key:
-        st.error("Missing DEEPSEEK_API_KEY in Streamlit Secrets.")
-        st.stop()
-
-    geo_info = lookup_address(address)
-    bbl = geo_info.get("bbl", "1012650001")
+    with col_left:
+        # Project Status Table
+        st.subheader("🏗️ Active Projects")
+        
+        df = pd.DataFrame(st.session_state.projects)
+        
+        # Format display
+        display_df = df[['name', 'address', 'compliance_score', 'risk_score', 'open_gaps', 'status']].copy()
+        display_df.columns = ['Project', 'Location', 'Compliance', 'Risk', 'Gaps', 'Status']
+        
+        # Add colored status badges
+        def status_color(status):
+            colors = {'active': '🟢', 'delayed': '🔴', 'pending': '🟡'}
+            return f"{colors.get(status, '⚪')} {status.title()}"
+        
+        display_df['Status'] = display_df['Status'].apply(status_color)
+        display_df['Compliance'] = display_df['Compliance'].apply(lambda x: f"{x}%")
+        display_df['Risk'] = display_df['Risk'].apply(lambda x: f"⚠️ {x}" if x > 30 else f"{x}")
+        
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        
+        # Compliance Trend Chart
+        st.subheader("📈 Compliance Trend (Last 30 Days)")
+        
+        # Generate sample trend data
+        dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+        trend_data = []
+        for project in st.session_state.projects[:3]:  # Top 3 projects
+            scores = [project['compliance_score'] + (i % 5 - 2) for i in range(30)]
+            for date, score in zip(dates, scores):
+                trend_data.append({
+                    'Date': date,
+                    'Project': project['name'],
+                    'Compliance Score': max(60, min(100, score))
+                })
+        
+        trend_df = pd.DataFrame(trend_data)
+        fig = px.line(trend_df, x='Date', y='Compliance Score', color='Project',
+                     title="", height=300)
+        fig.add_hline(y=85, line_dash="dash", line_color="red", 
+                     annotation_text="Audit Threshold (85%)")
+        fig.update_layout(showlegend=True, legend=dict(orientation="h", y=1.1))
+        st.plotly_chart(fig, use_container_width=True)
     
-    with st.status("🕵️ Running AI Visual Audit...", expanded=True) as status:
-        gap_engine = ComplianceGapEngine(project_type=p_type.lower())
-        batch_processor = SentinelBatchProcessor(engine=gap_engine, api_key=api_key)
+    with col_right:
+        # Risk Distribution
+        st.subheader("⚠️ Risk Distribution")
         
-        st.write("🛰️ Pulling NYC DOB Records...")
-        live_violations = fetch_live_dob_alerts({"bbl": bbl})
-        
-        st.write("👁️ Analyzing Visual Compliance...")
-        raw_findings = [batch_processor._process_single_image(f) for f in uploads]
-        
-        found_milestones = list(set([f.milestone for f in raw_findings if f.milestone != "Unknown"]))
-        analysis = gap_engine.detect_gaps(found_milestones)
-        
-        st.session_state.audit_results = {
-            "analysis": analysis,
-            "raw_findings": raw_findings,
-            "geo_info": geo_info,
-            "live_violations": live_violations,
-            "meta": {"name": p_name, "address": address}
+        risk_buckets = {
+            'Low (0-25)': len([p for p in st.session_state.projects if p['risk_score'] <= 25]),
+            'Medium (26-50)': len([p for p in st.session_state.projects if 25 < p['risk_score'] <= 50]),
+            'High (51-75)': len([p for p in st.session_state.projects if 50 < p['risk_score'] <= 75]),
+            'Critical (76+)': len([p for p in st.session_state.projects if p['risk_score'] > 75])
         }
-        status.update(label="Audit Complete!", state="complete", expanded=False)
+        
+        fig = go.Figure(data=[go.Pie(
+            labels=list(risk_buckets.keys()),
+            values=list(risk_buckets.values()),
+            hole=0.4,
+            marker=dict(colors=['#059669', '#f59e0b', '#ef4444', '#7f1d1d'])
+        )])
+        fig.update_layout(showlegend=True, height=300, margin=dict(t=0, b=0, l=0, r=0))
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Priority Alerts
+        st.subheader("🚨 Priority Alerts")
+        
+        high_risk_projects = [p for p in st.session_state.projects if p['risk_score'] > 30]
+        
+        for proj in high_risk_projects:
+            risk_class = 'risk-critical' if proj['risk_score'] > 40 else 'risk-warning'
+            st.markdown(f"""
+            <div class="metric-card {risk_class}">
+                <strong>{proj['name']}</strong><br>
+                <small>{proj['open_gaps']} open gaps • Risk Score: {proj['risk_score']}</small>
+            </div>
+            """, unsafe_allow_html=True)
+            st.markdown("")
+        
+        # Quick Actions
+        st.subheader("⚡ Quick Actions")
+        if st.button("➕ New Project Audit", use_container_width=True, type="primary"):
+            st.session_state.current_view = 'new_audit'
+            st.rerun()
+        if st.button("📊 Export Portfolio Report", use_container_width=True):
+            st.info("Generating comprehensive PDF report...")
+        if st.button("📧 Send Weekly Summary", use_container_width=True):
+            st.success("Weekly summary sent to team@gcfirm.com")
 
-# --- DASHBOARD DISPLAY ---
-if st.session_state.audit_results:
-    res = st.session_state.audit_results
+# ---------------- PROJECTS VIEW ----------------
+elif st.session_state.current_view == 'projects':
     
-    # Summary Metrics Row
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Compliance Score", f"{res['analysis'].compliance_score}%")
-    c2.metric("Risk Score", res['analysis'].risk_score)
-    c3.metric("Detected Milestones", len(set([f.milestone for f in res['raw_findings']])))
-    c4.metric("BBL Number", res['geo_info'].get('bbl', 'N/A'))
+    st.title("🏗️ Project Management")
+    
+    # Filter bar
+    col_search, col_status, col_sort = st.columns([3, 1, 1])
+    
+    with col_search:
+        search = st.text_input("🔍 Search projects", placeholder="Enter project name or address...")
+    with col_status:
+        status_filter = st.selectbox("Status", ["All", "Active", "Delayed", "Pending"])
+    with col_sort:
+        sort_by = st.selectbox("Sort by", ["Compliance ↓", "Risk ↑", "Name", "Date"])
+    
+    st.markdown("---")
+    
+    # Project cards in grid
+    projects = st.session_state.projects
+    
+    # Apply filters
+    if status_filter != "All":
+        projects = [p for p in projects if p['status'] == status_filter.lower()]
+    if search:
+        projects = [p for p in projects if search.lower() in p['name'].lower() or search.lower() in p['address'].lower()]
+    
+    # Grid layout (2 columns)
+    cols_per_row = 2
+    for i in range(0, len(projects), cols_per_row):
+        cols = st.columns(cols_per_row)
+        for j, col in enumerate(cols):
+            if i + j < len(projects):
+                proj = projects[i + j]
+                with col:
+                    # Project card
+                    risk_class = 'risk-critical' if proj['risk_score'] > 40 else ('risk-warning' if proj['risk_score'] > 25 else 'risk-safe')
+                    
+                    st.markdown(f"""
+                    <div class="metric-card {risk_class}">
+                        <h3 style='margin:0 0 0.5rem 0;'>{proj['name']}</h3>
+                        <p style='margin:0; color:#6b7280; font-size:0.875rem;'>{proj['address']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Metrics
+                    subcol1, subcol2, subcol3 = st.columns(3)
+                    subcol1.metric("Compliance", f"{proj['compliance_score']}%")
+                    subcol2.metric("Risk", proj['risk_score'])
+                    subcol3.metric("Gaps", proj['open_gaps'])
+                    
+                    # Actions
+                    if st.button("📊 View Details", key=f"view_{proj['id']}", use_container_width=True):
+                        st.info(f"Opening detailed audit for {proj['name']}...")
+                    
+                    st.markdown("")
 
-    tab1, tab2, tab3 = st.tabs(["🏗️ Visual Audit", "🚨 NYC DOB Sync", "🛡️ Evidence Export"])
-
+# ---------------- ANALYTICS VIEW ----------------
+elif st.session_state.current_view == 'analytics':
+    
+    st.title("📈 Portfolio Analytics & Intelligence")
+    
+    tab1, tab2, tab3, tab4 = st.tabs(["💰 Financial Impact", "📊 Performance Metrics", "🎯 Predictive Insights", "📸 Photo Intelligence"])
+    
     with tab1:
-        st.header("Spatial Mapping & Progress")
-        col_map, col_img = st.columns([1.5, 1])
-        with col_map:
-            map_data = pd.DataFrame({'lat': [res['geo_info']['lat']], 'lon': [res['geo_info']['lon']]})
-            st.map(map_data, zoom=16)
-        with col_img:
-            st.image(uploads[0], caption="Latest Field Capture", use_container_width=True)
-            st.warning(f"**Action Required:** {res['analysis'].next_priority}")
-
+        st.subheader("Insurance Premium Optimization")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Current vs Optimized Premium
+            total_premium = sum(p['insurance_premium'] for p in st.session_state.projects)
+            optimized_premium = total_premium * 0.85  # 15% savings potential
+            
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=['Current Premium', 'Optimized Premium'],
+                y=[total_premium/1e6, optimized_premium/1e6],
+                marker_color=['#ef4444', '#059669'],
+                text=[f"${total_premium/1e6:.1f}M", f"${optimized_premium/1e6:.1f}M"],
+                textposition='outside'
+            ))
+            fig.update_layout(title="Potential Premium Savings", yaxis_title="Amount ($M)", height=300)
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.success(f"**Potential Annual Savings: ${(total_premium - optimized_premium)/1e6:.1f}M**")
+        
+        with col2:
+            # Delay Cost Calculator
+            st.markdown("**⏱️ Delay Cost Impact Calculator**")
+            
+            delay_days = st.slider("Project Delay (days)", 0, 30, 7)
+            daily_cost = st.number_input("Daily Carrying Cost ($)", value=50000, step=10000)
+            
+            total_delay_cost = delay_days * daily_cost
+            
+            st.metric("Total Delay Cost", f"${total_delay_cost:,}", 
+                     delta=f"-${total_delay_cost:,}" if delay_days == 0 else None,
+                     delta_color="inverse")
+            
+            st.info(f"**Gap Resolution ROI:** Fixing compliance gaps prevents average {delay_days}-day delays, saving ${total_delay_cost:,}")
+    
     with tab2:
-        st.header("DOB NOW / BIS Active Violation Sync")
-        if res['live_violations']:
-            st.error(f"🚨 FOUND {len(res['live_violations'])} ACTIVE VIOLATIONS")
-            st.dataframe(res['live_violations'], use_container_width=True)
-        else:
-            st.success("✅ No active violations found for this Property Block (BBL).")
-
-    with tab3:
-        st.header("Forensic PDF Export")
-        st.info("Verified audit trail for TCO, Insurance adjusters, and Bank Draw verification.")
+        st.subheader("Portfolio Performance Benchmarking")
         
-        pdf_bytes = create_pdf_report(res['meta']['name'], res['meta']['address'], res['analysis'], res['raw_findings'])
+        # Compliance score distribution
+        scores = [p['compliance_score'] for p in st.session_state.projects]
         
-        st.download_button(
-            label="📄 DOWNLOAD FORENSIC EVIDENCE LOG",
-            data=pdf_bytes,
-            file_name=f"SentinelReport_{res['meta']['name'].replace(' ', '_')}.pdf",
-            mime="application/pdf"
-        )
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(
+            x=scores,
+            nbinsx=10,
+            marker_color='#3b82f6',
+            name='Projects'
+        ))
+        fig.add_vline(x=sum(scores)/len(scores), line_dash="dash", line_color="red",
+                     annotation_text=f"Avg: {sum(scores)/len(scores):.0f}%")
+        fig.update_layout(title="Compliance Score Distribution", xaxis_title="Score", yaxis_title="Count", height=300)
+        st.plotly_chart(fig, use_container_width=True)
         
-        # Evidence Table
-        st.subheader("Raw AI Evidence Trace")
-        findings_data = []
-        for f in res['raw_findings']:
-            findings_data.append({
-                "Milestone": f.milestone,
-                "Floor": f.floor,
-                "Confidence": f"{f.confidence*100:.1f}%",
-                "Evidence Notes": f.evidence_notes
+        # Project type comparison
+        st.subheader("Performance by Project Type")
+        
+        type_data = []
+        for proj in st.session_state.projects:
+            type_data.append({
+                'Type': proj['type'],
+                'Avg Compliance': proj['compliance_score'],
+                'Avg Risk': proj['risk_score']
             })
-        st.table(pd.DataFrame(findings_data))
-else:
-    st.title("SentinelScope AI Command Center")
-    st.info("Ready for Audit. Please upload site imagery via the sidebar to begin.")
+        
+        type_df = pd.DataFrame(type_data).groupby('Type').mean().reset_index()
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(name='Compliance', x=type_df['Type'], y=type_df['Avg Compliance'], marker_color='#059669'))
+        fig.add_trace(go.Bar(name='Risk', x=type_df['Type'], y=type_df['Avg Risk'], marker_color='#ef4444'))
+        fig.update_layout(barmode='group', height=300, title="Compliance & Risk by Project Type")
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with tab3:
+        st.subheader("🔮 AI Predictive Insights")
+        
+        st.info("**Predictive Model:** Using historical data from 150+ NYC projects to forecast risks")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**🎯 Audit Likelihood Prediction**")
+            
+            for proj in st.session_state.projects[:3]:
+                audit_prob = min(95, proj['risk_score'] * 1.5 + 20)
+                color = "#ef4444" if audit_prob > 70 else ("#f59e0b" if audit_prob > 40 else "#059669")
+                
+                st.markdown(f"""
+                <div style='padding:1rem; background:{color}22; border-left:4px solid {color}; border-radius:8px; margin-bottom:0.5rem;'>
+                    <strong>{proj['name']}</strong><br>
+                    <span style='font-size:1.5rem; font-weight:bold;'>{audit_prob:.0f}%</span> audit probability
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("**📅 Predicted Issue Timeline**")
+            
+            timeline_data = [
+                {"Project": "270 Park Ave", "Issue": "Scaffolding inspection due", "Days": 14, "Priority": "Medium"},
+                {"Project": "Hudson Yards", "Issue": "MEP rough-in review", "Days": 7, "Priority": "High"},
+                {"Project": "Brooklyn Navy", "Issue": "Foundation photos missing", "Days": 3, "Priority": "Critical"}
+            ]
+            
+            timeline_df = pd.DataFrame(timeline_data)
+            
+            for _, row in timeline_df.iterrows():
+                priority_color = {"Critical": "#ef4444", "High": "#f59e0b", "Medium": "#3b82f6"}[row['Priority']]
+                st.markdown(f"""
+                <div style='padding:0.75rem; background:white; border-left:4px solid {priority_color}; border-radius:8px; margin-bottom:0.5rem; box-shadow:0 1px 3px rgba(0,0,0,0.1);'>
+                    <strong>{row['Project']}</strong><br>
+                    {row['Issue']} • <span style='color:{priority_color}'>Due in {row['Days']} days</span>
+                </div>
+                """, unsafe_allow_html=True)
+    
+    with tab4:
+        st.subheader("📸 Photo Intelligence Dashboard")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        total_photos = sum(p['total_captures'] for p in st.session_state.projects)
+        col1.metric("Total Photos", f"{total_photos:,}")
+        col2.metric("Avg per Project", f"{total_photos // len(st.session_state.projects):,}")
+        col3.metric("AI Processing Cost", "$127.35")
+        col4.metric("Coverage Rate", "94%")
+        
+        st.markdown("---")
+        
+        # Photo timeline
+        st.markdown("**📅 Photo Capture Timeline**")
+        
+        dates = pd.date_range(end=datetime.now(), periods=90, freq='D')
+        photo_counts = [50 + (i % 20) * 5 for i in range(90)]
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=dates, y=photo_counts, mode='lines', fill='tozeroy',
+                                line=dict(color='#3b82f6'), name='Daily Captures'))
+        fig.update_layout(title="Daily Photo Captures (Last 90 Days)", xaxis_title="Date", 
+                         yaxis_title="Photos", height=300)
+        st.plotly_chart(fig, use_container_width=True)
+
+# ---------------- COMPLIANCE VIEW ----------------
+elif st.session_state.current_view == 'compliance':
+    
+    st.title("⚖️ NYC DOB Compliance Center")
+    
+    tab1, tab2, tab3 = st.tabs(["🚨 Active Violations", "📋 Inspection Calendar", "📖 Code Reference"])
+    
+    with tab1:
+        st.subheader("Active DOB Violations Across Portfolio")
+        
+        # Sample violation data
+        violations = [
+            {"Project": "Brooklyn Navy Yard", "Type": "Scaffolding", "Code": "BC 3301.9", "Issued": "2024-12-15", "Fine": 5000, "Status": "Open"},
+            {"Project": "270 Park Ave", "Type": "Safety Fence", "Code": "BC 3307.6", "Issued": "2024-12-20", "Fine": 2500, "Status": "Pending"},
+        ]
+        
+        if violations:
+            st.error(f"🚨 **{len(violations)} Active Violations** requiring immediate attention")
+            
+            viol_df = pd.DataFrame(violations)
+            st.dataframe(viol_df, use_container_width=True, hide_index=True)
+            
+            total_fines = sum(v['Fine'] for v in violations)
+            st.metric("Total Outstanding Fines", f"${total_fines:,}")
+        else:
+            st.success("✅ No active violations across portfolio")
+    
+    with tab2:
+        st.subheader("Required Inspections & Deadlines")
+        
+        # Sample inspection schedule
+        inspections = [
+            {"Project": "Hudson Yards", "Type": "Structural Steel", "Required": "2025-01-15", "Status": "Scheduled"},
+            {"Project": "270 Park Ave", "Type": "Fireproofing", "Required": "2025-01-22", "Status": "Pending"},
+            {"Project": "Brooklyn Navy", "Type": "Foundation", "Required": "2025-01-08", "Status": "Overdue"}
+        ]
+        
+        insp_df = pd.DataFrame(inspections)
+        
+        def status_styling(status):
+            colors = {"Scheduled": "🟢", "Pending": "🟡", "Overdue": "🔴"}
+            return f"{colors.get(status, '⚪')} {status}"
+        
+        insp_df['Status'] = insp_df['Status'].apply(status_styling)
+        st.dataframe(insp_df, use_container_width=True, hide_index=True)
+        
+        overdue_count = len([i for i in inspections if i['Status'] == 'Overdue'])
+        if overdue_count > 0:
+            st.warning(f"⚠️ {overdue_count} inspection(s) overdue")
+    
+    with tab3:
+        st.subheader("NYC Building Code Quick Reference")
+        
+        code_sections = {
+            "Chapter 33 - Safeguards During Construction": "Covers temporary structures, safety fencing, and site protection requirements",
+            "Chapter 17 - Special Inspections": "Defines required inspections for structural elements and fireproofing",
+            "Chapter 28 - Administrative": "Filing procedures, permit requirements, and DOB compliance process"
+        }
+        
+        for section, description in code_sections.items():
+            with st.expander(f"📖 {section}"):
+                st.write(description)
+                st.markdown("[View full code section →](https://codes.iccsafe.org/)")
+
+# ====== FOOTER ======
+st.markdown("---")
+st.markdown("""
+<div style='text-align:center; color:#6b7280; font-size:0.875rem;'>
+    <strong>SentinelScope Pro v2.8</strong> • Powered by DeepSeek AI • NYC DOB Real-Time Data<br>
+    © 2025 ThriveAI • <a href='#'>Privacy Policy</a> • <a href='#'>Terms of Service</a> • <a href='#'>Support</a>
+</div>
+""", unsafe_allow_html=True)

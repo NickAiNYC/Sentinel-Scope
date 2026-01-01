@@ -1,36 +1,110 @@
-# Python
+# ============================================================================
+# SentinelScope AI - Git Ignore Rules
+# ============================================================================
+
+# --- Python ---
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
+*$py.class
 *.so
-*.egg
-*.egg-info/
-dist/
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Virtual Environment
+# --- Virtual Environments ---
 venv/
-env/
 ENV/
+env/
+.venv
+.conda/
 
-# IDE
+# --- IDE / Editor ---
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
-Thumbs.db
 
-# Secrets (DO NOT COMMIT)
-.streamlit/secrets.toml
+# --- Environment Variables ---
 .env
-*.key
+.env.local
+.env.*.local
+*.pem
 
-# Keep assets
-!assets/*.mp4
-.DS_Store
+# --- Streamlit ---
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# --- Testing ---
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# --- MyPy ---
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# --- Ruff ---
+.ruff_cache/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Temporary Files ---
+*.tmp
+*.temp
+temp/
+tmp/
+
+# --- Generated Reports ---
+reports/*.pdf
+reports/*.json
+*.pdf
+*.csv
+
+# --- Uploaded Files (if storing locally) ---
+uploads/
+data/uploads/
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints/
+*.ipynb
+
+# --- OS Specific ---
+Thumbs.db
+Desktop.ini
+
+# --- Package Management ---
+poetry.lock
+Pipfile.lock
+
+# --- Documentation Build ---
+docs/_build/
+site/
+
+# ============================================================================
+# Keep These (Examples and Templates)
+# ============================================================================
+!.env.example
+!data/sample_captures/
+!assets/demo.gif

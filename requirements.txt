@@ -1,20 +1,77 @@
-# Core Web Framework & Data
-streamlit>=1.40.0
-pandas>=2.2.2
-plotly>=5.24.1
-requests>=2.32.3
+# ============================================================================
+# SentinelScope AI - Production Dependencies
+# ============================================================================
+# Generated: 2025-01-XX
+# Python: 3.10+
+# Platform: Cross-platform (Windows, macOS, Linux, Streamlit Cloud)
+# ============================================================================
 
-# AI & Geolocation
-openai>=1.55.0
-geopy>=2.4.1
-pydantic>=2.9.0
-python-dotenv>=1.0.1
+# --- Core Web Framework & UI ---
+# Streamlit 1.52.0+ required for st.status, st.metrics with delta, and performance improvements
+streamlit>=1.52.0,<2.0.0
+pandas>=2.3.3,<3.0.0
+plotly>=6.0.0,<7.0.0
+requests>=2.32.3,<3.0.0
 
-# Reporting & Utilities
-fpdf2>=2.8.1
-Pillow>=10.4.0
+# --- AI Reasoning & NLP ---
+# DeepSeek uses the standard OpenAI SDK (OpenAI-Compatible API)
+# OpenAI SDK v2.x has breaking changes, so we constrain it
+openai>=2.14.0,<3.0.0
 
-# Engineering Rigor
-ruff>=0.6.0
-mypy>=1.11.0
-pytest>=8.3.0
+# RapidFuzz is the 2025 standard for high-speed string matching
+# 10-20x faster than deprecated FuzzyWuzzy
+rapidfuzz>=3.14.3,<4.0.0
+
+# Pydantic v2.x for data validation and type safety
+pydantic>=2.12.5,<3.0.0
+
+# --- Geolocation & NYC Property Data ---
+# Geopy for BBL geocoding and address lookup
+geopy>=2.4.1,<3.0.0
+
+# Python-dotenv for environment variable management
+python-dotenv>=1.0.1,<2.0.0
+
+# --- Reporting & Image Processing ---
+# fpdf2 is used for generating the forensic PDF audit logs
+# fpdf2 is the maintained fork of PyFPDF (original is abandoned)
+fpdf2>=2.8.5,<3.0.0
+
+# Pillow for image processing and manipulation
+Pillow>=12.0.0,<13.0.0
+
+# --- Engineering & Quality Gates (Development Only) ---
+# These are optional for production deployment but recommended for CI/CD
+# Install with: pip install -r requirements-dev.txt
+
+# Ruff for lightning-fast linting (10-100x faster than Flake8+Black)
+# ruff>=0.8.0,<1.0.0
+
+# MyPy for static type checking
+# mypy>=1.14.0,<2.0.0
+
+# Pytest for comprehensive test coverage
+# pytest>=8.3.4,<9.0.0
+
+# --- Optional Performance Enhancements ---
+# Uncomment if you need additional performance optimization
+
+# numpy>=2.0.0,<3.0.0  # For faster numerical operations
+# openpyxl>=3.1.0      # For Excel export functionality
+# python-dateutil>=2.9.0  # For advanced date parsing
+
+# ============================================================================
+# Installation Instructions
+# ============================================================================
+# Standard installation:
+#   pip install -r requirements.txt
+#
+# Development installation (includes testing/linting):
+#   pip install -r requirements.txt -r requirements-dev.txt
+#
+# Upgrade all dependencies:
+#   pip install --upgrade -r requirements.txt
+#
+# Streamlit Cloud deployment:
+#   This file is automatically detected and installed
+# ============================================================================

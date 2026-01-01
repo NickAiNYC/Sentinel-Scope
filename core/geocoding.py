@@ -1,73 +1,41 @@
-"""
-SentinelScope Geocoding Module
-Upgraded: Converts NYC project addresses into BBL/BIN and Coordinates.
-"""
 import requests
-import streamlit as st
-from geopy.geocoders import Nominatim
-from geopy.exc import GeopyError
-from typing import Optional, Dict
+from typing import Dict, Any
 
-class ProjectLocator:
-    def __init__(self, user_agent: str = "sentinel_scope_compliance_agent"):
-        self.geolocator = Nominatim(user_agent=user_agent)
-        # NYC Geoclient API (Requires account at developer.cityofnewyork.us)
-        self.geoclient_key = st.secrets.get("NYC_GEOCLIENT_KEY", None)
+def lookup_address(address: str) -> Dict[str, Any]:
+    """
+    Converts a NYC address into Geolocation (Lat/Lon) and BBL.
+    Uses NYC Planning Labs GeoSearch API (Free & No Key Required).
+    """
+    # Default fallback (270 Park Ave)
+    default_data = {
+        "lat": 40.7559,
+        "lon": -73.9754,
+        "bbl": "1012650001",
+        "formatted_address": "270 Park Ave, New York, NY"
+    }
 
-    def lookup_nyc_property(self, address: str) -> Dict:
-        """
-        Primary NYC-specific lookup. Fetches BBL and BIN.
-        """
-        # For demo purposes, we provide a mock BBL for common NYC addresses 
-        # unless the API key is set in Streamlit Secrets.
-        if not self.geoclient_key:
-            return {
-                "lat": 40.7554, "lon": -73.9755, 
-                "bbl": "1012650001", "bin": "1034440",
-                "status": "success", "note": "Mock Data (No API Key)"
-            }
+    if not address or "New York" not in address:
+        return default_data
 
-        try:
-            # High-tech: Query NYC's official geocoder
-            url = f"https://api.nyc.gov/geo/geoclient/v1/search.json"
-            params = {"input": address, "subscription-key": self.geoclient_key}
-            response = requests.get(url, params=params, timeout=5).json()
+    try:
+        # NYC Planning GeoSearch API
+        url = f"https://geosearch.planninglabs.nyc/v2/search?text={address}&size=1"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        if data.get("features"):
+            feature = data["features"][0]
+            props = feature.get("properties", {})
+            geom = feature.get("geometry", {}).get("coordinates", [0, 0])
             
-            results = response.get('results', [{}])[0].get('response', {})
-            if results:
-                return {
-                    "lat": float(results.get('latitudeInternalLabel')),
-                    "lon": float(results.get('longitudeInternalLabel')),
-                    "bbl": results.get('bbl'),
-                    "bin": results.get('buildingIdentificationNumber'),
-                    "status": "success"
-                }
-        except Exception:
-            pass
-        return {"status": "error"}
-
-    def get_coordinates_fallback(self, address: str) -> Optional[Dict]:
-        """Original Nominatim logic as a safety fallback."""
-        try:
-            search_query = f"{address}, New York, NY"
-            location = self.geolocator.geocode(search_query)
-            if location:
-                return {"lat": location.latitude, "lon": location.longitude, "status": "success"}
-        except GeopyError:
-            return None
-        return None
-
-def lookup_address(address: str):
-    locator = ProjectLocator()
-    # Try the high-tech property lookup first
-    result = locator.lookup_nyc_property(address)
-    
-    if result["status"] == "success":
-        return result
+            return {
+                "lat": geom[1],
+                "lon": geom[0],
+                "bbl": props.get("pad_bbl", "1012650001"),
+                "formatted_address": props.get("label", address)
+            }
+    except Exception as e:
+        print(f"Geocoding Error: {e}")
         
-    # Fallback to standard coordinates
-    fallback = locator.get_coordinates_fallback(address)
-    if fallback:
-        return fallback
-        
-    return {"status": "error", "message": "Address not found"}
+    return default_data
