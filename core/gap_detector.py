@@ -1,403 +1,381 @@
 """
-SentinelScope Gap Detector v2.7 (Enhanced - Dec 2025)
-Integrates NYC BC 2022/2025 mapping, RapidFuzz Matching, and DeepSeek Reasoning.
-Enhanced with: improved error handling, LRU caching, token tracking, and batch processing.
+SentinelScope Gap Detection Engine
+Identifies missing milestones and compliance gaps using fuzzy matching.
 """
-from typing import List, Optional, Dict, Tuple
-from rapidfuzz import fuzz, process
+import json
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+
 from openai import OpenAI
-import streamlit as st
-from functools import lru_cache
-import time
-from core.models import GapAnalysisResponse, ComplianceGap, CaptureClassification
-from core.constants import NYC_BC_REFS
-import pytest
-
-from core.gap_detector import ComplianceGapEngine
-from core.models import GapAnalysisResponse
+from rapidfuzz import fuzz
 
 
-# 🏗️ FIXTURE: Shared engine setup
-@pytest.fixture
-def structural_engine():
-    return ComplianceGapEngine(project_type="structural", fuzzy_threshold=85)
+@dataclass
+class MilestoneGap:
+    """Represents a missing compliance milestone."""
+
+    milestone: str
+    dob_code: str
+    risk_level: str
+    dob_class: str
+    deadline: str
+    recommendation: str
 
 
-# ✅ TEST: Partial Milestone Detection
-def test_detect_gaps_partial_completion(structural_engine):
-    """
-    Checks that only finding 'Foundation' triggers
-    a missing 'Structural Steel' gap.
-    """
-    found_milestones = ["Foundation"]
+@dataclass
+class GapAnalysisResponse:
+    """Complete gap analysis result."""
+
+    compliance_score: int
+    risk_score: int
+    total_found: int
+    gap_count: int
+    next_priority: str
+    missing_milestones: list[MilestoneGap]
+
 
 class ComplianceGapEngine:
-    """
-    Advanced compliance gap detection engine with AI-powered remediation.
-    
-    Features:
-    - NYC Building Code 2022/2025 compliance mapping
-    - RapidFuzz fuzzy matching for milestone detection
-    - DeepSeek AI for cost-effective remediation reasoning
-    - Token usage tracking and cost estimation
-    - LRU caching for repeated analyses
-    - Exponential backoff retry logic
-    """
-    
-    # 2025 Enhanced Domain Logic
-    TARGET_REQUIREMENTS = {
-        "structural": {
-            "Foundation": {"code": NYC_BC_REFS["STRUCTURAL"]["FOUNDATIONS"], "criticality": "Critical", "weight": 35},
-            "Structural Steel": {"code": NYC_BC_REFS["STRUCTURAL"]["STEEL"], "criticality": "High", "weight": 25},
-            "Fireproofing": {"code": NYC_BC_REFS["FIRE_PROTECTION"]["FIRE_RESISTANCE"], "criticality": "Critical", "weight": 20},
-            "Cold-Formed Steel": {"code": "BC Section 2210", "criticality": "Medium", "weight": 10},
-            "Exterior Walls": {"code": "BC Chapter 14", "criticality": "Medium", "weight": 10}
-        },
-        "mep": {
-            "MEP Rough-in": {"code": NYC_BC_REFS["MEP"]["MECHANICAL"], "criticality": "High", "weight": 25},
-            "Fire Protection": {"code": "BC Chapter 9", "criticality": "Critical", "weight": 35},
-            "Electrical Distribution": {"code": "NYC Electrical Code (2025)", "criticality": "High", "weight": 25},
-            "HVAC Installation": {"code": "MC Chapter 6", "criticality": "Medium", "weight": 15}
-        }
+    """Detects compliance gaps using fuzzy matching and AI analysis."""
+
+    # NYC Building Code 2022 Required Milestones by Project Type
+    REQUIRED_MILESTONES = {
+        "structural": [
+            "Foundation Inspection",
+            "Structural Frame Inspection",
+            "Fireproofing Application",
+            "Concrete Pour Inspection",
+            "Rebar Inspection",
+        ],
+        "mep": [
+            "Rough-in Inspection",
+            "Final MEP Inspection",
+            "HVAC Installation",
+            "Electrical Rough-in",
+            "Plumbing Rough-in",
+        ],
+        "fireproofing": [
+            "Fireproofing Application",
+            "Fire-rated Assembly Inspection",
+            "Spray Fireproofing Documentation",
+        ],
+        "foundation": [
+            "Foundation Inspection",
+            "Excavation Safety Inspection",
+            "Waterproofing Installation",
+            "Foundation Pour",
+        ],
     }
-    
-    # DeepSeek pricing (as of Dec 2025)
-    DEEPSEEK_COST_PER_1K_TOKENS = 0.00027
 
     def __init__(self, project_type: str = "structural", fuzzy_threshold: int = 85):
         """
-        Initialize the compliance gap engine.
-        
+        Initialize gap detector.
+
         Args:
-            project_type: Project category ('structural' or 'mep')
-            fuzzy_threshold: Minimum similarity score (0-100) for fuzzy matching
+            project_type: Type of project (structural, mep, fireproofing, foundation)
+            fuzzy_threshold: Minimum similarity score for matching (0-100)
         """
         self.project_type = project_type.lower()
         self.fuzzy_threshold = fuzzy_threshold
-        self.rules = self.TARGET_REQUIREMENTS.get(
-            self.project_type,
-            self.TARGET_REQUIREMENTS["structural"]
+        self.required_milestones = self.REQUIRED_MILESTONES.get(
+            self.project_type, self.REQUIRED_MILESTONES["structural"]
         )
-        self.total_tokens_used = 0
-        self.total_api_cost = 0.0
-
-    def _get_ai_remediation(
-        self, 
-        milestone: str, 
-        code: str, 
-        api_key: str, 
-        max_retries: int = 3
-    ) -> Tuple[str, Dict[str, float]]:
-        """
-        Uses DeepSeek (via OpenAI-compatible SDK) for NYC-specific remediation steps.
-        
-        Args:
-            milestone: Missing milestone name
-            code: NYC Building Code reference
-            api_key: DeepSeek API key
-            max_retries: Maximum retry attempts for failed requests
-            
-        Returns:
-            Tuple of (remediation_text, usage_metrics)
-        """
-        prompt = (
-            f"Act as a Senior NYC DOB Auditor. A project site is missing evidence of '{milestone}' "
-            f"under {code}. Based on NYC BC 2022 and 2025 updates, provide 2 precise, "
-            f"field-actionable remediation steps to clear this gap. Be concise and professional. "
-            f"Respond with only the two steps, numbered."
-        )
-        
-        for attempt in range(max_retries):
-            try:
-                client = OpenAI(
-                    api_key=api_key,
-                    base_url="https://api.deepseek.com"
-                )
-                
-                response = client.chat.completions.create(
-                    model="deepseek-chat",  # DeepSeek-V3
-                    max_tokens=200,
-                    temperature=0.3,
-                    messages=[{"role": "user", "content": prompt}]
-                )
-                
-                # Track usage
-                tokens_used = response.usage.total_tokens
-                cost = tokens_used * self.DEEPSEEK_COST_PER_1K_TOKENS / 1000
-                
-                self.total_tokens_used += tokens_used
-                self.total_api_cost += cost
-                
-                usage_metrics = {
-                    "tokens": tokens_used,
-                    "cost": cost
-                }
-                
-                return response.choices[0].message.content.strip(), usage_metrics
-                
-            except Exception as e:
-                error_msg = str(e).lower()
-                
-                # Handle specific error types
-                if "rate_limit" in error_msg or "429" in error_msg:
-                    if attempt < max_retries - 1:
-                        wait_time = (2 ** attempt)  # Exponential backoff: 1s, 2s, 4s
-                        st.warning(f"⏸️ Rate limit hit. Retrying in {wait_time}s... (Attempt {attempt + 1}/{max_retries})")
-                        time.sleep(wait_time)
-                        continue
-                    else:
-                        return "⏸️ Rate limit exceeded. Please wait and try again.", {"tokens": 0, "cost": 0.0}
-                        
-                elif "api_key" in error_msg or "401" in error_msg or "authentication" in error_msg:
-                    return "🔑 Invalid API key. Check credentials in Settings.", {"tokens": 0, "cost": 0.0}
-                    
-                elif "timeout" in error_msg or "connection" in error_msg:
-                    if attempt < max_retries - 1:
-                        wait_time = (2 ** attempt)
-                        st.warning(f"🔌 Connection timeout. Retrying in {wait_time}s...")
-                        time.sleep(wait_time)
-                        continue
-                    else:
-                        return f"🔌 Connection failed after {max_retries} attempts.", {"tokens": 0, "cost": 0.0}
-                        
-                else:
-                    st.error(f"⚠️ DeepSeek API error: {str(e)}")
-                    return (
-                        f"🚨 URGENT: Conduct physical site audit for {milestone}. "
-                        f"Verify compliance with {code} immediately.",
-                        {"tokens": 0, "cost": 0.0}
-                    )
-        
-        # Fallback if all retries exhausted
-        return (
-            f"🚨 API unavailable. Manual audit required for {milestone} ({code}).",
-            {"tokens": 0, "cost": 0.0}
-        )
-
-    @lru_cache(maxsize=100)
-    def _get_ai_remediation_cached(
-        self, 
-        milestone: str, 
-        code: str, 
-        api_key: str
-    ) -> Tuple[str, Dict[str, float]]:
-        """
-        Cached version of AI remediation to avoid redundant API calls.
-        
-        Note: LRU cache prevents duplicate calls for identical (milestone, code, api_key) tuples.
-        Cache is cleared when the engine is re-instantiated.
-        """
-        return self._get_ai_remediation(milestone, code, api_key)
-
-    def _get_batch_remediation(
-        self, 
-        gaps: List[Tuple[str, str]], 
-        api_key: str
-    ) -> List[Tuple[str, Dict[str, float]]]:
-        """
-        Process multiple gaps in one API call to reduce latency and cost.
-        
-        Args:
-            gaps: List of (milestone, code) tuples
-            api_key: DeepSeek API key
-            
-        Returns:
-            List of (remediation_text, usage_metrics) tuples
-        """
-        if not gaps:
-            return []
-        
-        # Build batch prompt
-        prompt = (
-            "Act as a Senior NYC DOB Auditor. The following milestones are missing evidence. "
-            "For EACH milestone, provide 2 precise, field-actionable remediation steps based on NYC BC 2022/2025. "
-            "Format your response as:\n\n"
-            "**[Milestone Name]**\n1. [First step]\n2. [Second step]\n\n"
-            "Missing milestones:\n"
-        )
-        
-        for i, (milestone, code) in enumerate(gaps, 1):
-            prompt += f"{i}. {milestone} ({code})\n"
-        
-        try:
-            client = OpenAI(
-                api_key=api_key,
-                base_url="https://api.deepseek.com"
-            )
-            
-            response = client.chat.completions.create(
-                model="deepseek-chat",
-                max_tokens=500 + (len(gaps) * 100),  # Scale tokens with gap count
-                temperature=0.3,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            
-            # Track usage
-            tokens_used = response.usage.total_tokens
-            cost = tokens_used * self.DEEPSEEK_COST_PER_1K_TOKENS / 1000
-            
-            self.total_tokens_used += tokens_used
-            self.total_api_cost += cost
-            
-            # Parse batch response (simplified - you may want more robust parsing)
-            full_response = response.choices[0].message.content.strip()
-            
-            # Split by milestone markers
-            sections = full_response.split("**")
-            remediations = []
-            
-            for section in sections:
-                if section.strip():
-                    # Distribute cost evenly across gaps
-                    per_gap_metrics = {
-                        "tokens": tokens_used // len(gaps),
-                        "cost": cost / len(gaps)
-                    }
-                    remediations.append((section.strip(), per_gap_metrics))
-            
-            # Ensure we have one remediation per gap
-            while len(remediations) < len(gaps):
-                remediations.append((
-                    "🚨 URGENT: Conduct physical site audit. Verify compliance immediately.",
-                    {"tokens": 0, "cost": 0.0}
-                ))
-            
-            return remediations[:len(gaps)]
-            
-        except Exception as e:
-            st.error(f"Batch remediation failed: {str(e)}")
-            # Return fallback for all gaps
-            return [(
-                f"🚨 URGENT: Conduct physical site audit for {milestone}. Verify compliance with {code}.",
-                {"tokens": 0, "cost": 0.0}
-            ) for milestone, code in gaps]
+        self.usage_stats = {
+            "total_tokens": 0,
+            "total_cost_usd": 0,
+            "model": "deepseek-chat",
+        }
 
     def detect_gaps(
-        self, 
-        findings: List[CaptureClassification], 
-        api_key: Optional[str] = None,
-        use_batch_processing: bool = False
+        self,
+        findings: list,
+        api_key: str,
+        use_batch_processing: bool = True,
     ) -> GapAnalysisResponse:
         """
-        Analyzes AI findings against NYC regulatory requirements.
-        
+        Detect compliance gaps by comparing findings to requirements.
+
         Args:
-            findings: List of classified milestones from computer vision
-            api_key: DeepSeek API key (optional, for AI remediation)
-            use_batch_processing: If True, process all gaps in one API call
-            
+            findings: List of CaptureClassification objects
+            api_key: DeepSeek API key
+            use_batch_processing: Whether to batch API calls
+
         Returns:
-            GapAnalysisResponse with missing milestones, scores, and recommendations
+            GapAnalysisResponse with analysis results
         """
-        # Reset token tracking for this analysis
-        self.total_tokens_used = 0
-        self.total_api_cost = 0.0
-        
-        found_names = [f.milestone for f in findings if f.confidence > 0.6]
+        # Extract found milestones
+        found_milestones = [f.milestone for f in findings if f.confidence > 0.5]
 
-        missing_milestones = []
-        earned_weight = 0
-        total_weight = sum(info['weight'] for info in self.rules.values())
-        
-        # First pass: identify gaps
-        gaps_to_process = []
-        for req, info in self.rules.items():
-            match_result = process.extractOne(req, found_names, scorer=fuzz.WRatio)
-            is_present = match_result and match_result[1] >= self.fuzzy_threshold
-            
-            # Track match confidence
-            match_confidence = "Not Found"
-            if match_result:
-                similarity = match_result[1]
-                if similarity >= 95:
-                    match_confidence = f"Exact Match ({similarity}%)"
-                elif similarity >= self.fuzzy_threshold:
-                    match_confidence = f"High Similarity ({similarity}%)"
-                elif similarity >= 70:
-                    match_confidence = f"Partial Match ({similarity}%)"
+        # Find missing milestones using fuzzy matching
+        missing = []
+        for required in self.required_milestones:
+            if not self._is_milestone_found(required, found_milestones):
+                missing.append(required)
 
-            if is_present:
-                earned_weight += info['weight']
-            else:
-                gaps_to_process.append((req, info))
-
-        # Second pass: get AI remediation (batch or individual)
-        if api_key and gaps_to_process:
-            if use_batch_processing and len(gaps_to_process) > 2:
-                # Batch process for efficiency
-                gap_tuples = [(req, info['code']) for req, info in gaps_to_process]
-                remediations = self._get_batch_remediation(gap_tuples, api_key)
-            else:
-                # Individual processing with caching
-                remediations = [
-                    self._get_ai_remediation_cached(req, info['code'], api_key)
-                    for req, info in gaps_to_process
-                ]
+        # Generate gap analysis with AI
+        if missing and api_key:
+            gap_details = self._generate_gap_analysis(
+                missing, api_key, use_batch_processing
+            )
         else:
-            # No API key - use fallback
-            remediations = [
-                (f"Request photo evidence for {req}. Verify compliance with {info['code']}.", {"tokens": 0, "cost": 0.0})
-                for req, info in gaps_to_process
-            ]
+            gap_details = []
 
-        # Build gap objects
-        severity_to_class = {
-            "Critical": "Class C", 
-            "High": "Class B", 
-            "Medium": "Class B", 
-            "Low": "Class A"
-        }
-        
-        for (req, info), (remediation, metrics) in zip(gaps_to_process, remediations):
-            current_class = severity_to_class.get(info["criticality"], "Class B")
-            
-            missing_milestones.append(ComplianceGap(
-                milestone=req,
-                floor_range="Audit Required",
-                dob_code=info["code"],
-                risk_level=info["criticality"],
-                dob_class=current_class,
-                deadline="Immediately" if info["criticality"] == "Critical" else "Within 7 Days",
-                recommendation=remediation
-            ))
+        # Calculate metrics
+        total_found = len(found_milestones)
+        gap_count = len(missing)
+        total_required = len(self.required_milestones)
 
-        # Calculate scores
-        compliance_score = int((earned_weight / total_weight) * 100) if total_weight > 0 else 0
-        risk_score = 100 - compliance_score
+        compliance_score = int(
+            (total_found / total_required * 100) if total_required > 0 else 100
+        )
 
-        # Determine priority
-        critical_count = sum(1 for g in missing_milestones if g.risk_level == "Critical")
-        if critical_count > 0:
-            priority = f"🚨 {critical_count} CRITICAL GAPS: STOP WORK RISK"
-        elif compliance_score < 75:
-            priority = "⚠️ CAUTION: Significant Evidence Gaps"
-        else:
-            priority = "✅ COMPLIANT: Standard Monitoring"
+        # Risk scoring
+        risk_score = self._calculate_risk_score(gap_details)
+
+        # Priority determination
+        next_priority = self._determine_priority(compliance_score, risk_score)
 
         return GapAnalysisResponse(
-            missing_milestones=missing_milestones,
             compliance_score=compliance_score,
             risk_score=risk_score,
-            total_found=len(found_names),
-            gap_count=len(missing_milestones),
-            next_priority=priority
+            total_found=total_found,
+            gap_count=gap_count,
+            next_priority=next_priority,
+            missing_milestones=gap_details,
         )
-    
-    def get_usage_summary(self) -> Dict[str, any]:
+
+    def _is_milestone_found(
+        self, required_milestone: str, found_milestones: list[str]
+    ) -> bool:
         """
-        Get summary of API usage and costs for the current session.
-        
+        Check if required milestone is found using fuzzy matching.
+
+        Args:
+            required_milestone: Required milestone name
+            found_milestones: List of found milestone names
+
         Returns:
-            Dictionary with tokens used and estimated cost
+            True if milestone found with sufficient similarity
+        """
+        for found in found_milestones:
+            similarity = fuzz.ratio(
+                required_milestone.lower(), found.lower()
+            )
+            if similarity >= self.fuzzy_threshold:
+                return True
+        return False
+
+    def _generate_gap_analysis(
+        self, missing_milestones: list[str], api_key: str, use_batch: bool
+    ) -> list[MilestoneGap]:
+        """
+        Generate detailed gap analysis using AI.
+
+        Args:
+            missing_milestones: List of missing milestone names
+            api_key: DeepSeek API key
+            use_batch: Whether to batch all gaps in one call
+
+        Returns:
+            List of MilestoneGap objects
+        """
+        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+
+        gap_results = []
+
+        if use_batch:
+            # Batch processing - all gaps in one call
+            prompt = f"""For each missing construction milestone, provide compliance details.
+
+Missing milestones: {', '.join(missing_milestones)}
+
+Respond ONLY with valid JSON array in this exact format:
+[
+  {{
+    "milestone": "milestone name",
+    "dob_code": "NYC BC code (e.g., BC 3301.1)",
+    "risk_level": "Critical|High|Medium|Low",
+    "dob_class": "Class 1|2|3",
+    "deadline": "timeline (e.g., '7 days', '30 days')",
+    "recommendation": "specific remediation steps"
+  }}
+]"""
+
+            try:
+                response = client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=2000,
+                    temperature=0.3,
+                )
+
+                # Update usage stats
+                usage = response.usage
+                self.usage_stats["total_tokens"] += usage.total_tokens
+                self.usage_stats["total_cost_usd"] += (
+                    usage.total_tokens * 0.00000014
+                )  # DeepSeek pricing
+
+                # Parse response
+                content = response.choices[0].message.content
+                json_start = content.find("[")
+                json_end = content.rfind("]") + 1
+                json_str = content[json_start:json_end]
+
+                gaps_data = json.loads(json_str)
+
+                for gap_data in gaps_data:
+                    gap_results.append(
+                        MilestoneGap(
+                            milestone=gap_data.get("milestone", "Unknown"),
+                            dob_code=gap_data.get("dob_code", "N/A"),
+                            risk_level=gap_data.get("risk_level", "Medium"),
+                            dob_class=gap_data.get("dob_class", "Class 2"),
+                            deadline=gap_data.get("deadline", "30 days"),
+                            recommendation=gap_data.get(
+                                "recommendation", "Consult with inspector"
+                            ),
+                        )
+                    )
+
+            except Exception as e:
+                # Fallback to default gaps
+                for milestone in missing_milestones:
+                    gap_results.append(self._create_default_gap(milestone))
+
+        else:
+            # Individual processing - one call per gap
+            for milestone in missing_milestones:
+                try:
+                    prompt = f"""Provide NYC Building Code compliance details for missing milestone: {milestone}
+
+Respond ONLY with valid JSON in this exact format:
+{{
+  "milestone": "{milestone}",
+  "dob_code": "NYC BC code",
+  "risk_level": "Critical|High|Medium|Low",
+  "dob_class": "Class 1|2|3",
+  "deadline": "timeline",
+  "recommendation": "remediation steps"
+}}"""
+
+                    response = client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=500,
+                        temperature=0.3,
+                    )
+
+                    # Update usage stats
+                    usage = response.usage
+                    self.usage_stats["total_tokens"] += usage.total_tokens
+                    self.usage_stats["total_cost_usd"] += (
+                        usage.total_tokens * 0.00000014
+                    )
+
+                    # Parse response
+                    content = response.choices[0].message.content
+                    json_start = content.find("{")
+                    json_end = content.rfind("}") + 1
+                    json_str = content[json_start:json_end]
+
+                    gap_data = json.loads(json_str)
+
+                    gap_results.append(
+                        MilestoneGap(
+                            milestone=gap_data.get("milestone", milestone),
+                            dob_code=gap_data.get("dob_code", "N/A"),
+                            risk_level=gap_data.get("risk_level", "Medium"),
+                            dob_class=gap_data.get("dob_class", "Class 2"),
+                            deadline=gap_data.get("deadline", "30 days"),
+                            recommendation=gap_data.get(
+                                "recommendation", "Consult with inspector"
+                            ),
+                        )
+                    )
+
+                except Exception:
+                    gap_results.append(self._create_default_gap(milestone))
+
+        return gap_results
+
+    def _create_default_gap(self, milestone: str) -> MilestoneGap:
+        """
+        Create default gap when AI analysis fails.
+
+        Args:
+            milestone: Milestone name
+
+        Returns:
+            MilestoneGap with default values
+        """
+        return MilestoneGap(
+            milestone=milestone,
+            dob_code="TBD",
+            risk_level="Medium",
+            dob_class="Class 2",
+            deadline="30 days",
+            recommendation="Schedule inspection with NYC DOB inspector",
+        )
+
+    def _calculate_risk_score(self, gaps: list[MilestoneGap]) -> int:
+        """
+        Calculate overall risk score based on gaps.
+
+        Args:
+            gaps: List of MilestoneGap objects
+
+        Returns:
+            Risk score (0-100, higher is worse)
+        """
+        if not gaps:
+            return 0
+
+        risk_weights = {"Critical": 100, "High": 75, "Medium": 50, "Low": 25}
+
+        total_risk = sum(risk_weights.get(g.risk_level, 50) for g in gaps)
+        max_risk = len(gaps) * 100
+
+        return int((total_risk / max_risk * 100) if max_risk > 0 else 0)
+
+    def _determine_priority(
+        self, compliance_score: int, risk_score: int
+    ) -> str:
+        """
+        Determine priority status based on scores.
+
+        Args:
+            compliance_score: Compliance percentage
+            risk_score: Risk score (0-100)
+
+        Returns:
+            Priority status string
+        """
+        if compliance_score >= 90 and risk_score < 30:
+            return "✅ EXCELLENT - All systems compliant"
+        if compliance_score >= 75 and risk_score < 50:
+            return "👍 ACCEPTABLE - Minor gaps detected"
+        if compliance_score >= 60 or risk_score < 70:
+            return "⚠️ CAUTION - Immediate action required"
+        return "🚨 CRITICAL - Major compliance failures"
+
+    def get_usage_summary(self) -> dict[str, int | float | str]:
+        """
+        Get API usage statistics.
+
+        Returns:
+            Dictionary with usage metrics
         """
         return {
-            "total_tokens": self.total_tokens_used,
-            "total_cost_usd": round(self.total_api_cost, 4),
-            "model": "deepseek-chat",
-            "cost_per_1k_tokens": self.DEEPSEEK_COST_PER_1K_TOKENS
+            "total_tokens": self.usage_stats["total_tokens"],
+            "total_cost_usd": self.usage_stats["total_cost_usd"],
+            "model": self.usage_stats["model"],
+            "cost_per_token": 0.00000014,  # DeepSeek pricing
         }
-    
-    def reset_usage_tracking(self):
-        """Reset token and cost tracking counters."""
-        self.total_tokens_used = 0
-        self.total_api_cost = 0.0
+
+    def reset_usage_stats(self) -> None:
+        """Reset usage statistics."""
+        self.usage_stats = {
+            "total_tokens": 0,
+            "total_cost_usd": 0,
+            "model": "deepseek-chat",
+        }
