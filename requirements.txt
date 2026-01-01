@@ -20,3 +20,4 @@ Pillow>=11.0.0
 ruff>=0.8.0
 mypy>=1.14.0
 pytest>=8.3.4
+instructor>=1.0.0,<2.0.0
