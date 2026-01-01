@@ -75,3 +75,4 @@ Pillow>=12.0.0,<13.0.0
 # Streamlit Cloud deployment:
 #   This file is automatically detected and installed
 # ============================================================================
+fpdf2>=2.8.5,<3.0.0
