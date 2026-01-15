@@ -1,49 +1,51 @@
-# 🏗️ Scope: AI-Powered NYC Construction Compliance Auditor
+# 🏗️ Scope: AI-Powered Construction Compliance Auditor
 
-> **Open Source AI Agent for Automated Construction Site Audits & NYC DOB Violation Detection**
+> **AI Agent for General Contractors - Automated NYC Construction Site Audits & DOB Compliance**
 
-## 🎯 What is Scope?
+## 🎯 Built for General Contractors
 
-Scope is an open-source AI agent that automates construction site compliance auditing for NYC projects. It uses computer vision to analyze site photos and cross-references them with NYC Building Code requirements and live DOB violation data.
+Scope automates construction site compliance auditing specifically for NYC general contractors. It uses computer vision to analyze site photos and cross-references them with NYC Building Code requirements and live DOB violation data for construction sites.
 
-### 🚀 Key Features
+### 🚀 Contractor-Specific Features
 
-- **AI Visual Analysis**: Processes construction site imagery using DeepSeek-V3 Vision
-- **NYC DOB Integration**: Real-time violation tracking via NYC Open Data API
-- **Compliance Gap Detection**: Identifies missing milestones against NYC BC 2022
-- **Forensic Reporting**: Generates audit-ready evidence logs for insurance and inspections
-- **Geospatial Intelligence**: BBL-based property lookup and violation mapping
+- **AI Site Photo Analysis**: Processes construction site imagery to identify milestones
+- **NYC DOB Violation Check**: Real-time violation tracking for construction sites
+- **Compliance Gap Detection**: Identifies missing construction milestones against NYC BC 2022
+- **Forensic Evidence Logs**: Generates audit-ready reports for insurance renewals
+- **Permit Monitoring**: Tracks active permits and expiration dates
+- **Progress Documentation**: Automates progress tracking for client reporting
 
-## 📊 Why Use Scope?
+## 📊 Contractor Workflow
 
 | Task | Manual Process | With Scope |
 |------|----------------|------------|
-| **Site Audit** | 40-80 hours | **< 10 minutes** |
-| **Violation Check** | Manual API queries | **Automated real-time sync** |
-| **Report Generation** | Manual compilation | **AI-generated forensic PDF** |
-| **Compliance Tracking** | Spreadsheet management | **Automated gap detection** |
+| **Site Audit** | 40-80 hours manual review | **< 10 minutes** automated analysis |
+| **DOB Violation Check** | Manual API queries | **Automated real-time sync** |
+| **Insurance Documentation** | Manual compilation | **AI-generated forensic PDF** |
+| **Progress Reporting** | Spreadsheet updates | **Automated milestone tracking** |
 
-## 🏗️ Use Cases
+## 🏗️ Contractor Use Cases
 
-1. **General Contractors**: Automated progress documentation for insurance renewals
-2. **Project Managers**: Real-time compliance monitoring across multiple sites
-3. **Risk Assessors**: Forensic evidence collection for claims and audits
-4. **Developers**: Integration with construction management platforms
+1. **Insurance Renewals**: Automated documentation for carrier requirements
+2. **DOB Inspections**: Pre-inspection compliance checks
+3. **Client Reporting**: Automated progress updates for owners
+4. **Change Order Validation**: Evidence collection for scope changes
+5. **Safety Compliance**: Automated safety protocol verification
 
 ## 🛠️ Technology Stack
 
-- **AI/ML**: DeepSeek-V3 Vision, OpenAI-compatible API
-- **Backend**: Python, Streamlit, FastAPI
-- **Data**: NYC Open Data (Socrata API), Geopy for geocoding
-- **Reporting**: FPDF2 for forensic PDF generation
-- **Frontend**: Streamlit (web interface), React (optional dashboard)
+- **AI/ML**: DeepSeek-V3 Vision for construction image analysis
+- **NYC Data**: DOB violation API, permit databases, building codes
+- **Backend**: Python, Streamlit for rapid deployment
+- **Reporting**: Forensic PDF generation for legal/insurance use
+- **Geospatial**: BBL-based site identification and mapping
 
-## 🚀 Quick Start
+## 🚀 Quick Start for Contractors
 
 ### Prerequisites
 - Python 3.12+
-- DeepSeek API key (or compatible OpenAI API key)
-- NYC Open Data App Token (optional, for higher rate limits)
+- DeepSeek API key (for AI image analysis)
+- Construction site photos (JPEG/PNG format)
 
 ### Installation
 ```bash
@@ -54,99 +56,88 @@ cd Scope
 # Install dependencies
 pip install -r requirements.txt
 
-# Set up environment variables
+# Set up API keys
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your DeepSeek API key
 ```
 
 ### Running the Application
 ```bash
-# Start the Streamlit web app
+# Start the construction audit dashboard
 streamlit run app.py
 ```
 
-## 📁 Project Structure
+## 📁 Project Structure for Contractors
 
 ```
 Scope/
-├── app.py              # Main Streamlit application
-├── core/               # Core AI engine modules
-├── violations/         # NYC DOB violation management
-│   ├── dob/           # DOB API integration
-│   ├── reports/       # Report generation
-│   └── api/           # REST API endpoints
-├── data/              # Mock data and examples
-├── tests/             # Test suite
-└── requirements.txt   # Python dependencies
+├── app.py              # Main contractor dashboard
+├── core/               # Construction AI engine
+│   ├── gap_detector.py # Compliance gap detection
+│   ├── processor.py    # Image batch processing
+│   └── geocoding.py    # Site location services
+├── violations/         # DOB violation checking
+│   └── dob/           # Construction site violation monitoring
+├── data/              # Sample construction data
+├── tests/             # Construction-specific tests
+└── requirements.txt   # Dependencies
 ```
 
-## 🔧 API Integration
+## 🔧 Contractor API Integration
 
-### NYC DOB Violation API
+### Check Construction Site Violations
 ```python
 from violations.dob.dob_engine import DOBEngine
 
-# Fetch violations by BBL (Borough-Block-Lot)
+# Check violations for a construction site BBL
 violations = DOBEngine.fetch_live_dob_alerts({"bbl": "1012650001"})
+print(f"Found {len(violations)} violations at site")
 ```
 
-### Compliance Gap Detection
+### Analyze Construction Progress
 ```python
 from core.gap_detector import ComplianceGapEngine
 
+# Check for missing construction milestones
 engine = ComplianceGapEngine(project_type="structural")
-gap_analysis = engine.detect_gaps(["Foundation", "Structural Steel"])
+found_milestones = ["Foundation", "Structural Steel"]
+gap_analysis = engine.detect_gaps(found_milestones)
+print(f"Compliance: {gap_analysis.compliance_score}%")
 ```
 
-## 📊 Sample Workflow
+## 📊 Contractor Workflow Example
 
-1. **Upload Site Photos** through the web interface
-2. **AI Analysis** identifies construction milestones
-3. **DOB Check** fetches live violation data for the property
-4. **Gap Detection** compares against NYC BC 2022 requirements
-5. **Report Generation** creates forensic evidence PDF
+1. **Upload Site Photos** from daily site documentation
+2. **AI Identifies** construction milestones and progress
+3. **DOB Check** verifies no active violations at site
+4. **Gap Analysis** compares against NYC BC 2022 requirements
+5. **Generate Report** for insurance or client delivery
 
-## 🏛️ NYC Compliance Coverage
+## 🏛️ NYC Construction Compliance Coverage
 
-- **NYC Building Code 2022** (BC 2022)
-- **NYC Existing Building Code** (EBC 2025)
-- **DOB Violation Classes** (A, B, C)
-- **Local Law 97** Carbon Compliance
-- **1 RCNY 103-15** Parapet Inspection Rules
+- **NYC Building Code 2022** (BC 2022) - Structural requirements
+- **DOB Violation Monitoring** - Site-specific violation checks
+- **Permit Compliance** - Active permit tracking
+- **Site Safety** - Chapter 33 compliance
+- **Special Inspections** - Required inspection tracking
 
-## 🤝 Contributing
+## 👷‍♂️ Related Project: ViolationSentinel
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+For **landlords and property managers** needing comprehensive property violation monitoring (HPD, 311, DOB across portfolios), see our sister project:
 
-### Development Setup
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Run tests
-pytest tests/
-
-# Code formatting
-ruff check . --fix
-```
+**[ViolationSentinel](https://github.com/NickAiNYC/ViolationSentinel)** - Property management violation dashboard
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - See [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- **NYC Open Data** for providing public access to DOB records
-- **DeepSeek** for affordable AI vision capabilities
-- **Streamlit** for rapid web application development
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/NickAiNYC/Scope/issues)
-- **Documentation**: [Project Wiki](https://github.com/NickAiNYC/Scope/wiki)
-- **Email**: Contact through GitHub profile
+- **NYC DOB** for construction code and violation data
+- **DeepSeek** for affordable construction image analysis
+- **NYC General Contractors** for workflow validation
 
 ---
 
-*Scope is maintained by [NickAiNYC](https://github.com/NickAiNYC).*
-*This project is for educational and demonstration purposes.*
+*Scope is maintained for the NYC construction community.*
+*Built by contractors, for contractors.*
