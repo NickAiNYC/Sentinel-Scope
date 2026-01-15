@@ -15,7 +15,7 @@ if ROOT_DIR not in sys.path:
 try:
     from core.constants import BRAND_THEME
     from core.geocoding import lookup_address
-    from core.dob_engine import DOBEngine  
+    from violations.dob.dob_engine import DOBEngine  
     from core.gap_detector import ComplianceGapEngine
     from core.processor import SentinelBatchProcessor
 except ImportError as e:

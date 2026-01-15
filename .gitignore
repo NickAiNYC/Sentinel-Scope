@@ -24,3 +24,19 @@ secrets.py
 assets/temp/
 *.log
 !assets/*.mp4
+
+# ====== Organization Updates ======
+# Confidential/Sensitive directories
+CONFIDENTIAL AI/
+scope-private/
+
+# Generated reports
+reports/
+
+# Cleanup script (temporary)
+cleanup.sh
+
+# Organization summary files (temporary)
+ORGANIZATION_SUMMARY.md
+PROJECT_SUMMARY.md
+!violations/reports/
