@@ -1,0 +1,29 @@
+# Development dependencies for Scope
+
+# Testing
+pytest>=8.3.4
+pytest-cov>=5.0.0
+
+# Linting & Formatting
+ruff>=0.8.0
+mypy>=1.14.0
+pre-commit>=3.7.0
+
+# Type checking
+types-requests>=2.32.0.20250106
+types-python-dateutil>=2.9.0.20240311
+
+# Documentation
+mkdocs>=1.6.0
+mkdocs-material>=9.5.26
+
+# Development tools
+ipython>=8.25.0
+jupyter>=1.1.1
+
+# Optional: For local development with Streamlit
+streamlit>=1.52.0
+
+# Optional: For API development
+fastapi>=0.115.0
+uvicorn>=0.30.0
