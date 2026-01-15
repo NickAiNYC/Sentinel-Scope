@@ -2,6 +2,7 @@
 SentinelScope Gap Detection Engine
 Identifies missing milestones and compliance gaps using fuzzy matching.
 """
+
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -157,9 +158,7 @@ class ComplianceGapEngine:
             True if milestone found with sufficient similarity
         """
         for found in found_milestones:
-            similarity = fuzz.ratio(
-                required_milestone.lower(), found.lower()
-            )
+            similarity = fuzz.ratio(required_milestone.lower(), found.lower())
             if similarity >= self.fuzzy_threshold:
                 return True
         return False
@@ -337,9 +336,7 @@ Respond ONLY with valid JSON in this exact format:
 
         return int((total_risk / max_risk * 100) if max_risk > 0 else 0)
 
-    def _determine_priority(
-        self, compliance_score: int, risk_score: int
-    ) -> str:
+    def _determine_priority(self, compliance_score: int, risk_score: int) -> str:
         """
         Determine priority status based on scores.
 

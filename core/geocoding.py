@@ -1,7 +1,9 @@
-import requests
-from typing import Dict, Any
+from typing import Any, Dict
 
-def lookup_address(address: str) -> Dict[str, Any]:
+import requests
+
+
+def lookup_address(address: str) -> dict[str, Any]:
     """
     Converts a NYC address into Geolocation (Lat/Lon) and BBL.
     Uses NYC Planning Labs GeoSearch API (Free & No Key Required).
@@ -11,7 +13,7 @@ def lookup_address(address: str) -> Dict[str, Any]:
         "lat": 40.7559,
         "lon": -73.9754,
         "bbl": "1012650001",
-        "formatted_address": "270 Park Ave, New York, NY"
+        "formatted_address": "270 Park Ave, New York, NY",
     }
 
     if not address or "New York" not in address:
@@ -28,14 +30,14 @@ def lookup_address(address: str) -> Dict[str, Any]:
             feature = data["features"][0]
             props = feature.get("properties", {})
             geom = feature.get("geometry", {}).get("coordinates", [0, 0])
-            
+
             return {
                 "lat": geom[1],
                 "lon": geom[0],
                 "bbl": props.get("pad_bbl", "1012650001"),
-                "formatted_address": props.get("label", address)
+                "formatted_address": props.get("label", address),
             }
     except Exception as e:
         print(f"Geocoding Error: {e}")
-        
+
     return default_data

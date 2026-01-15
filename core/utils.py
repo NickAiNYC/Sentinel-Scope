@@ -13,6 +13,7 @@ Categories:
 - Reporting helpers
 - API error handling
 """
+
 import base64
 import hashlib
 import json
@@ -298,9 +299,7 @@ def get_image_metadata(image_source: str | bytes | object) -> dict[str, object]:
         return {"error": str(e)}
 
 
-def validate_image_file(
-    file_path: str, max_size_mb: int = 10
-) -> tuple[bool, str]:
+def validate_image_file(file_path: str, max_size_mb: int = 10) -> tuple[bool, str]:
     """
     Validate image file (exists, correct format, size).
 
@@ -590,9 +589,7 @@ def sanitize_filename(filename: str, max_length: int = 200) -> str:
 
     # Limit length
     if len(filename) > max_length:
-        name, ext = (
-            filename.rsplit(".", 1) if "." in filename else (filename, "")
-        )
+        name, ext = filename.rsplit(".", 1) if "." in filename else (filename, "")
         name = name[: max_length - len(ext) - 1]
         filename = f"{name}.{ext}" if ext else name
 
@@ -644,9 +641,7 @@ def clean_text(text: str, max_length: int | None = None) -> str:
     text = " ".join(text.split())
 
     # Remove non-printable characters
-    text = "".join(
-        char for char in text if char.isprintable() or char in "\n\t"
-    )
+    text = "".join(char for char in text if char.isprintable() or char in "\n\t")
 
     # Truncate if needed
     if max_length and len(text) > max_length:
@@ -678,11 +673,7 @@ def parse_api_error(error: Exception) -> dict[str, str]:
         message = "API rate limit exceeded. Please wait and try again."
         suggestion = "Wait 60 seconds or reduce batch size."
 
-    elif (
-        "api_key" in error_str
-        or "401" in error_str
-        or "authentication" in error_str
-    ):
+    elif "api_key" in error_str or "401" in error_str or "authentication" in error_str:
         category = "authentication"
         message = "Invalid API key or authentication failed."
         suggestion = "Check your API key in Settings."

@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 # Load local .env file if it exists (for your Mac)
@@ -14,8 +15,8 @@ DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEEPSEEK_MODEL = "deepseek-chat"  # or "deepseek-reasoner" for R1
 
 # Project Constants
-DEFAULT_NYC_RADIUS = 800    # Meters
-COMPLIANCE_YEAR = 2022      # NYC BC 2022
+DEFAULT_NYC_RADIUS = 800  # Meters
+COMPLIANCE_YEAR = 2022  # NYC BC 2022
 SUPPORTED_SYSTEMS = ["Structural", "MEP", "Life Safety", "Envelope"]
 
 # Validation (Optional but helpful for debugging)
