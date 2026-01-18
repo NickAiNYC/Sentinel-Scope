@@ -1,10 +1,8 @@
 import base64
 import concurrent.futures
-import os
-from typing import List, Optional, Union
+from typing import Any
 
 import instructor  # Optimized for DeepSeek-V3.2 structured outputs
-from openai import OpenAI
 
 from core.gap_detector import ComplianceGapEngine
 from core.models import CaptureClassification, GapAnalysisResponse
@@ -39,7 +37,7 @@ class SentinelBatchProcessor:
         Valid Floor Codes: ^[0-9RCBLMPHSC]+$ (Use PH for Penthouse, SC for Sub-Cellar).
         """
 
-    def _prepare_base64(self, file_source: str | any) -> str:
+    def _prepare_base64(self, file_source: str | Any) -> str:
         """Handles encoding for local paths and Streamlit UploadedFile objects."""
         try:
             if hasattr(file_source, 'read'):
@@ -50,7 +48,7 @@ class SentinelBatchProcessor:
         except Exception as e:
             raise OSError(f"Image Encoding Error: {str(e)}")
 
-    def _process_single_image(self, file_source: str | any) -> CaptureClassification:
+    def _process_single_image(self, file_source: str | Any) -> CaptureClassification:
         """Sends image to DeepSeek-V3.2 with 'Thinking Mode' for forensic validation."""
         try:
             base64_image = self._prepare_base64(file_source)
@@ -87,7 +85,7 @@ class SentinelBatchProcessor:
                 evidence_notes=f"System Error: {str(e)}"
             )
 
-    def run_audit(self, file_sources: list[str | any]) -> list[CaptureClassification]:
+    def run_audit(self, file_sources: list[str | Any]) -> list[CaptureClassification]:
         """Processes site captures in parallel using a ThreadPool."""
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             return list(executor.map(self._process_single_image, file_sources))
