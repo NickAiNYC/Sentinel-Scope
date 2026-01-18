@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
-from typing import List, Optional
-from typing_extensions import Self
+from typing import List, Optional, Self
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
 
 class CaptureClassification(BaseModel):
     """Data structure for AI-tagged site images used for forensic evidence."""
@@ -11,7 +12,7 @@ class CaptureClassification(BaseModel):
     )
 
     milestone: str = Field(..., description="NYC Construction Milestone (e.g., Fireproofing)")
-    mep_system: Optional[str] = None
+    mep_system: str | None = None
     # Enhanced pattern: Supports PH (Penthouse), C (Cellar), and typical floor numbers
     floor: str = Field(..., pattern=r"^[0-9RCBLMPHSC]+$") 
     zone: str = Field(..., description="Site quadrant (North, Core, Hoist, etc.)")
@@ -31,7 +32,7 @@ class ComplianceGap(BaseModel):
 
 class GapAnalysisResponse(BaseModel):
     """Final output from ComplianceGapEngine for the Streamlit Dashboard."""
-    missing_milestones: List[ComplianceGap]
+    missing_milestones: list[ComplianceGap]
     compliance_score: int = Field(..., ge=0, le=100)
     risk_score: int = Field(..., ge=0, le=100)
     total_found: int

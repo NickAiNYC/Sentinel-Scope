@@ -2,8 +2,9 @@
 NYC DOB Alerts module - Integration with NYC Open Data (Socrata API)
 Focus: Active Complaints, Violations, and After-Hours Variances
 """
+from typing import Any, Dict, List
+
 import requests
-from typing import List, Dict, Any
 
 # NYC Open Data Resource IDs (For Day 4 Integration)
 # Complaints: https://data.cityofnewyork.us/Housing-Development/DOB-Complaints-Received/e9v6-56v6
@@ -14,7 +15,7 @@ class DOBAlertsManager:
         self.base_url = "https://data.cityofnewyork.us/resource"
         self.app_token = app_token
 
-    def get_nearby_alerts(self, lat: float, lon: float, radius_meters: int = 800) -> Dict[str, Any]:
+    def get_nearby_alerts(self, lat: float, lon: float, radius_meters: int = 800) -> dict[str, Any]:
         """
         Fetches live DOB violation and complaint data within a geo-radius.
         """
@@ -38,7 +39,7 @@ class DOBAlertsManager:
             "alerts": mock_alerts
         }
 
-    def _get_mock_data(self) -> List[Dict[str, Any]]:
+    def _get_mock_data(self) -> list[dict[str, Any]]:
         """Realistic data structures matching NYC Socrata schema"""
         return [
             {

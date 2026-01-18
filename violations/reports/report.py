@@ -3,10 +3,12 @@ SentinelScope Report Module
 Generates Markdown for UI display and branded PDF for insurance/legal export.
 """
 
-import pandas as pd
-from datetime import datetime
-from fpdf2 import FPDF
 import io
+from datetime import datetime
+
+import pandas as pd
+from fpdf2 import FPDF
+
 
 # --- 1. PDF CLASS FOR BRANDING ---
 class SentinelAuditPDF(FPDF):
