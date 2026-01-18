@@ -4,11 +4,12 @@ Integrates NYC BC 2022/2025 mapping, RapidFuzz Matching, and Claude 4.5 Reasonin
 """
 
 from typing import List, Optional
-from rapidfuzz import fuzz, process
+
 import anthropic
-import streamlit as st
-from core.models import GapAnalysisResponse, ComplianceGap, CaptureClassification
+from rapidfuzz import fuzz, process
+
 from core.constants import NYC_BC_REFS
+from core.models import CaptureClassification, ComplianceGap, GapAnalysisResponse
 
 class ComplianceGapEngine:
     # 2025 Enhanced Domain Logic
