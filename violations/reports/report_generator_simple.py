@@ -4,7 +4,8 @@ Simple PDF report generator for testing.
 
 import os
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from fpdf import FPDF
 
 
@@ -26,10 +27,10 @@ class SimpleReportGenerator:
 
     def generate_report(
         self,
-        batch_results: List[Dict],
+        batch_results: list[dict],
         gap_analysis: Any = None,
         include_sustainability: bool = True,
-        output_path: Optional[str] = None,
+        output_path: str | None = None,
     ) -> str:
         """
         Generate a simple PDF report.

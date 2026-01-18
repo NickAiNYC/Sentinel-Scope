@@ -1,9 +1,11 @@
-import requests
 import os
-from typing import List, Dict
+from typing import Dict, List
+
+import requests
+
 
 # 1. Standalone function for direct import (Fixes app.py line 16)
-def fetch_live_dob_alerts(query_params: Dict) -> List[Dict]:
+def fetch_live_dob_alerts(query_params: dict) -> list[dict]:
     """
     Queries NYC OpenData for active DOB ECB Violations using BBL.
     """
@@ -41,7 +43,7 @@ def fetch_live_dob_alerts(query_params: Dict) -> List[Dict]:
 class DOBEngine:
     """NYC DOB Data Integration Engine."""
     @staticmethod
-    def fetch_live_dob_alerts(query_params: Dict) -> List[Dict]:
+    def fetch_live_dob_alerts(query_params: dict) -> list[dict]:
         return fetch_live_dob_alerts(query_params)
 
 # 3. Explicit Export

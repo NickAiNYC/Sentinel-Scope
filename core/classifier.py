@@ -1,9 +1,12 @@
 import base64
 import json
 from typing import List
+
 from openai import OpenAI
-from core.models import CaptureClassification
+
 from core.constants import MILESTONES
+from core.models import CaptureClassification
+
 
 class SiteClassifier:
     """Uses DeepSeek-VL to classify construction captures against NYC milestones."""
@@ -67,7 +70,7 @@ class SiteClassifier:
                 nyc_code_ref="N/A"
             )
 
-    def batch_classify(self, uploads: List, project_type: str) -> List[CaptureClassification]:
+    def batch_classify(self, uploads: list, project_type: str) -> list[CaptureClassification]:
         """Processes multiple images in sequence (can be optimized with async)."""
         results = []
         for upload in uploads:

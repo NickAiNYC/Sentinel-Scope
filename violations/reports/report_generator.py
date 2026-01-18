@@ -4,10 +4,11 @@ Uses fpdf2 for reliable PDF generation on Streamlit Cloud.
 """
 
 import os
-from datetime import datetime
-from typing import List, Dict, Any, Optional
-from fpdf import FPDF
 from collections import Counter
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from fpdf import FPDF
 
 
 class SentinelReportGenerator:
@@ -32,10 +33,10 @@ class SentinelReportGenerator:
 
     def generate_report(
         self,
-        batch_results: List[Dict],
+        batch_results: list[dict],
         gap_analysis: Any = None,
         include_sustainability: bool = True,
-        output_path: Optional[str] = None,
+        output_path: str | None = None,
     ) -> str:
         """
         Generate full PDF report using fpdf2.

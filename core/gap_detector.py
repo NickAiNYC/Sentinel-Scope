@@ -4,11 +4,13 @@ Integrates NYC BC 2022/2025 mapping, RapidFuzz Matching, and Claude 4.5 Reasonin
 """
 
 from typing import List, Optional
-from rapidfuzz import fuzz, process
+
 import anthropic
-import streamlit as st
-from core.models import GapAnalysisResponse, ComplianceGap, CaptureClassification
+from rapidfuzz import fuzz, process
+
 from core.constants import NYC_BC_REFS
+from core.models import CaptureClassification, ComplianceGap, GapAnalysisResponse
+
 
 class ComplianceGapEngine:
     # 2025 Enhanced Domain Logic
@@ -53,7 +55,7 @@ class ComplianceGapEngine:
         except Exception:
             return f"🚨 URGENT: Conduct physical site audit for {milestone}. Verify compliance with {code} immediately."
 
-    def detect_gaps(self, findings: List[CaptureClassification], api_key: Optional[str] = None) -> GapAnalysisResponse:
+    def detect_gaps(self, findings: list[CaptureClassification], api_key: str | None = None) -> GapAnalysisResponse:
         """Analyzes AI findings against NYC regulatory requirements."""
         # Use a higher confidence floor for forensic data to reduce false positives
         found_names = [f.milestone for f in findings if f.confidence > 0.6]

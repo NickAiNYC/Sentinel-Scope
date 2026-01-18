@@ -2,11 +2,13 @@
 SentinelScope Geocoding Module
 Upgraded: Converts NYC project addresses into BBL/BIN and Coordinates with Smart Caching.
 """
+from typing import Dict
+
 import requests
 import streamlit as st
-from geopy.geocoders import Nominatim
 from geopy.exc import GeopyError
-from typing import Dict
+from geopy.geocoders import Nominatim
+
 
 class ProjectLocator:
     def __init__(self, user_agent: str = "sentinel_scope_compliance_agent"):
@@ -14,7 +16,7 @@ class ProjectLocator:
         # NYC Geoclient API (Developer Portal: developer.cityofnewyork.us)
         self.geoclient_key = st.secrets.get("NYC_GEOCLIENT_KEY", None)
 
-    def lookup_nyc_property(self, address: str) -> Dict:
+    def lookup_nyc_property(self, address: str) -> dict:
         """
         Primary NYC-specific lookup. Fetches BBL and BIN.
         """
@@ -56,7 +58,7 @@ class ProjectLocator:
             
         return default_data
 
-    def get_coordinates_fallback(self, address: str) -> Dict:
+    def get_coordinates_fallback(self, address: str) -> dict:
         """Nominatim logic as a secondary safety fallback."""
         try:
             search_query = f"{address}, New York, NY"
@@ -75,7 +77,7 @@ class ProjectLocator:
         return {"status": "error", "lat": 40.7, "lon": -74.0}
 
 @st.cache_data(ttl=86400) # Cache address lookups for 24 hours
-def lookup_address(address: str) -> Dict:
+def lookup_address(address: str) -> dict:
     """
     Main entry point for app.py. 
     Uses caching to prevent redundant API calls.

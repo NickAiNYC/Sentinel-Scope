@@ -1,11 +1,12 @@
-import concurrent.futures
 import base64
-import os
-from typing import List, Union, Optional
-from openai import OpenAI
+import concurrent.futures
+from typing import Any
+
 import instructor  # Optimized for DeepSeek-V3.2 structured outputs
+
 from core.gap_detector import ComplianceGapEngine
 from core.models import CaptureClassification, GapAnalysisResponse
+
 
 class SentinelBatchProcessor:
     """
@@ -36,7 +37,7 @@ class SentinelBatchProcessor:
         Valid Floor Codes: ^[0-9RCBLMPHSC]+$ (Use PH for Penthouse, SC for Sub-Cellar).
         """
 
-    def _prepare_base64(self, file_source: Union[str, any]) -> str:
+    def _prepare_base64(self, file_source: str | Any) -> str:
         """Handles encoding for local paths and Streamlit UploadedFile objects."""
         try:
             if hasattr(file_source, 'read'):
@@ -45,9 +46,9 @@ class SentinelBatchProcessor:
             with open(file_source, "rb") as image_file:
                 return base64.b64encode(image_file.read()).decode('utf-8')
         except Exception as e:
-            raise IOError(f"Image Encoding Error: {str(e)}")
+            raise OSError(f"Image Encoding Error: {str(e)}")
 
-    def _process_single_image(self, file_source: Union[str, any]) -> CaptureClassification:
+    def _process_single_image(self, file_source: str | Any) -> CaptureClassification:
         """Sends image to DeepSeek-V3.2 with 'Thinking Mode' for forensic validation."""
         try:
             base64_image = self._prepare_base64(file_source)
@@ -84,11 +85,11 @@ class SentinelBatchProcessor:
                 evidence_notes=f"System Error: {str(e)}"
             )
 
-    def run_audit(self, file_sources: List[Union[str, any]]) -> List[CaptureClassification]:
+    def run_audit(self, file_sources: list[str | Any]) -> list[CaptureClassification]:
         """Processes site captures in parallel using a ThreadPool."""
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             return list(executor.map(self._process_single_image, file_sources))
 
-    def finalize_gap_analysis(self, findings: List[CaptureClassification]) -> GapAnalysisResponse:
+    def finalize_gap_analysis(self, findings: list[CaptureClassification]) -> GapAnalysisResponse:
         """Finalizes the remediation roadmap."""
         return self.engine.detect_gaps(findings, self.client)

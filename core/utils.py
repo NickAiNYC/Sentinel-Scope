@@ -3,7 +3,7 @@ SentinelScope Utilities
 Helper functions for data validation and coordinate sanitization.
 """
 
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 # NYC Bounding Box (Approximate limits of the 5 boroughs)
 NYC_BOUNDS = {
@@ -29,7 +29,7 @@ def sanitize_text(text: str) -> str:
     cleaned = " ".join(text.split())
     return cleaned.strip()
 
-def format_risk_label(score: float) -> Dict[str, str]:
+def format_risk_label(score: float) -> dict[str, str]:
     """Returns consistent UI styling based on compliance score."""
     if score >= 90:
         return {"label": "LOW", "color": "green", "icon": "✅"}

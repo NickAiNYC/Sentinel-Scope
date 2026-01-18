@@ -1,10 +1,11 @@
-import streamlit as st
-import pandas as pd
-import sys
 import os
+import sys
 from datetime import datetime
-from fpdf import FPDF
 from typing import List
+
+import pandas as pd
+import streamlit as st
+from fpdf import FPDF
 
 # ====== STREAMLIT CLOUD PATH FIX ======
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,10 +15,10 @@ if ROOT_DIR not in sys.path:
 # ====== CORE MODULE IMPORTS ======
 try:
     from core.constants import BRAND_THEME
-    from core.geocoding import lookup_address
-    from violations.dob.dob_engine import DOBEngine  
     from core.gap_detector import ComplianceGapEngine
+    from core.geocoding import lookup_address
     from core.processor import SentinelBatchProcessor
+    from violations.dob.dob_engine import DOBEngine
 except ImportError as e:
     st.error(f"Critical Import Error: {e}")
     st.stop()
@@ -41,7 +42,7 @@ class SentinelReport(FPDF):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
         self.cell(0, 10, f'Forensic Log | Generated: {timestamp} | Page {self.page_no()}', 0, 0, 'C')
 
-def create_pdf_report(p_name, address, analysis, findings: List):
+def create_pdf_report(p_name, address, analysis, findings: list):
     pdf = SentinelReport()
     pdf.add_page()
     
