@@ -1,5 +1,5 @@
 # core/auth.py
-import time
+from datetime import UTC, datetime
 
 import streamlit as st
 from supabase import Client, create_client
@@ -38,7 +38,9 @@ def sign_up(email: str, full_name: str):
                     "email": email,
                     "full_name": full_name,
                     "role": "admin",  # Default to admin for MVP
-                    "email_confirmed_at": "time"("utc", now()),  # Auto-confirm for MVP
+                    "email_confirmed_at": datetime.now(
+                        UTC
+                    ).isoformat(),  # Auto-confirm for MVP
                 }
             )
             .execute()
