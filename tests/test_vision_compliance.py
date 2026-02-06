@@ -91,6 +91,8 @@ def test_compliance_status_creation(compliant_status):
 
 def test_decision_proof_immutability():
     """Test that DecisionProof is immutable (frozen)."""
+    from pydantic import ValidationError
+    
     entity = DetectedEntity(
         entity_id=str(uuid.uuid4()),
         entity_type="Worker",
@@ -107,8 +109,8 @@ def test_decision_proof_immutability():
         timestamp=datetime.now()
     )
     
-    # Try to modify and expect error due to frozen=True
-    with pytest.raises(Exception):  # Pydantic raises ValidationError
+    # Try to modify and expect ValidationError due to frozen=True
+    with pytest.raises(ValidationError):
         proof.notification_sent = True
 
 

@@ -11,7 +11,7 @@ class DetectedEntity(BaseModel):
 
     entity_id: str = Field(..., description="Unique identifier for the detected entity")
     entity_type: str = Field(..., description="Type of entity: 'Worker' or 'Equipment'")
-    name: str | None = Field(None, description="Name or identifier of the entity")
+    name: str = Field(default="Unknown", description="Name or identifier of the entity")
     confidence: float = Field(..., ge=0, le=1, description="Detection confidence score")
     location: str = Field(..., description="Location where entity was detected")
     frame_timestamp: datetime = Field(..., description="Timestamp of the frame")

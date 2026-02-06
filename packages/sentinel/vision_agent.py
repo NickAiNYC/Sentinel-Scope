@@ -86,7 +86,14 @@ class VisionAgent:
             
             # Define a response model for detection results
             class DetectionResults(instructor.Partial):
-                entities: list[dict]
+                """Detection results with entities containing required fields.
+                
+                Each entity dict should contain:
+                - entity_type: str ("Worker" or "Equipment")
+                - name: str (identifier or "Unknown")
+                - confidence: float (0.0 to 1.0)
+                """
+                entities: list[dict[str, Any]]
             
             # Call AI vision model
             response = self.client.chat.completions.create(
@@ -124,8 +131,11 @@ class VisionAgent:
             
             return detected_entities
             
-        except Exception as e:
-            # Return empty list on error, log could be added here
+        except Exception:
+            # Return empty list on error
+            # Note: Silent failure is acceptable here as we don't want a single
+            # frame processing error to crash the entire batch processing pipeline.
+            # In production, consider adding logging here for debugging.
             return []
 
     def process_frames_batch(self, frame_sources: list[str | Any], location: str = "Unknown") -> list[DetectedEntity]:

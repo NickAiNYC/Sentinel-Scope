@@ -157,6 +157,9 @@ class VisionComplianceBridge:
         """
         Export all DecisionProofs to JSON-serializable format.
         
+        Note: Uses Pydantic v2 model_dump with mode='json'.
+        Requires Pydantic>=2.0.
+        
         Returns:
             List of proof dictionaries
         """
