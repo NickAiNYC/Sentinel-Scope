@@ -1,4 +1,8 @@
 """
-ConComplyAi Packages
-Modular agents and utilities for compliance and opportunity matching.
+ConComplyAi Suite
+
+Modular agents for:
+- Compliance & Document Validation (Core)
+- Site Monitoring & Vision (Sentinel)
+- NYC Project Opportunity Matching (ScopeSignal)
 """
