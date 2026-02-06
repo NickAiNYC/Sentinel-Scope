@@ -3,7 +3,6 @@ SentinelScope Report Module
 Generates Markdown for UI display and branded PDF for insurance/legal export.
 """
 
-import io
 from datetime import datetime
 
 import pandas as pd

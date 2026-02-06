@@ -7,7 +7,7 @@ Uses fpdf2 for reliable PDF generation on Streamlit Cloud.
 import os
 from collections import Counter
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fpdf import FPDF
 
@@ -289,7 +289,10 @@ class SentinelReportGenerator:
         pdf.cell(
             0,
             8,
-            f"Found: {total_found} milestones • Missing: {len(missing_milestones)} milestones",
+            (
+                f"Found: {total_found} milestones • "
+                f"Missing: {len(missing_milestones)} milestones"
+            ),
             0,
             1,
         )
@@ -362,7 +365,10 @@ class SentinelReportGenerator:
         pdf.cell(
             0,
             8,
-            f"Visual energy efficiency assessment performed on {len(esg_analyses)} images.",
+            (
+                f"Visual energy efficiency assessment performed on "
+                f"{len(esg_analyses)} images."
+            ),
             0,
             1,
         )
@@ -416,7 +422,10 @@ class SentinelReportGenerator:
         pdf.cell(
             0,
             8,
-            "Recommendation: Consider professional energy audit for full LL97 decarbonization planning.",
+            (
+                "Recommendation: Consider professional energy audit for "
+                "full LL97 decarbonization planning."
+            ),
             0,
             1,
         )
@@ -479,7 +488,10 @@ class SentinelReportGenerator:
         pdf.cell(
             0,
             5,
-            f"Auditor: {self.auditor_name} • Powered by DeepSeek AI Vision • © 2026 ThriveAI",
+            (
+                f"Auditor: {self.auditor_name} • "
+                f"Powered by DeepSeek AI Vision • © 2026 ThriveAI"
+            ),
             0,
             1,
             "C",

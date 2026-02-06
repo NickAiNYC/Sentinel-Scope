@@ -1,18 +1,10 @@
 # main.py
-import time
-
 import streamlit as st
 
-from core.auth import sign_in, sign_out, sign_up
-from core.database import (
-    create_project,
-    get_db_client,
-    get_projects_for_user,
-    save_audit,
-)
+from core.auth import sign_in, sign_up
+from core.database import create_project, get_projects_for_user, save_audit
 from core.gap_detector import ComplianceGapEngine
 from core.processor import SentinelBatchProcessor
-from core.report_generator import SentinelReportGenerator
 
 
 # ========================================================================
@@ -80,7 +72,7 @@ def dashboard_page():
             value = st.number_input("Value ($)", 0)
 
             if st.form_submit_button("Create Project"):
-                new_id = create_project(
+                create_project(
                     {
                         "name": name,
                         "address": address,

@@ -3,9 +3,7 @@ NYC DOB Alerts module - Integration with NYC Open Data (Socrata API)
 Focus: Active Complaints, Violations, and After-Hours Variances
 """
 
-from typing import Any, Dict, List
-
-import requests
+from typing import Any
 
 # NYC Open Data Resource IDs (For Day 4 Integration)
 # Complaints: https://data.cityofnewyork.us/Housing-Development/DOB-Complaints-Received/e9v6-56v6
@@ -50,7 +48,10 @@ class DOBAlertsManager:
                 "code": "BC 105.1",
                 "status": "Open",
                 "priority": "High",
-                "description": "Observed structural alterations without valid DOB permit.",
+                "description": (
+                    "Observed structural alterations without valid DOB "
+                    "permit."
+                ),
             },
             {
                 "date": "2025-01-18",

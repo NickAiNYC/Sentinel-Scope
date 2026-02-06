@@ -5,7 +5,6 @@ Identifies missing milestones and compliance gaps using fuzzy matching.
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 
 from openai import OpenAI
 from rapidfuzz import fuzz
@@ -183,7 +182,8 @@ class ComplianceGapEngine:
 
         if use_batch:
             # Batch processing - all gaps in one call
-            prompt = f"""For each missing construction milestone, provide compliance details.
+            prompt = f"""For each missing construction milestone, \
+provide compliance details.
 
 Missing milestones: {', '.join(missing_milestones)}
 
@@ -236,7 +236,7 @@ Respond ONLY with valid JSON array in this exact format:
                         )
                     )
 
-            except Exception as e:
+            except Exception:
                 # Fallback to default gaps
                 for milestone in missing_milestones:
                     gap_results.append(self._create_default_gap(milestone))
@@ -245,7 +245,8 @@ Respond ONLY with valid JSON array in this exact format:
             # Individual processing - one call per gap
             for milestone in missing_milestones:
                 try:
-                    prompt = f"""Provide NYC Building Code compliance details for missing milestone: {milestone}
+                    prompt = f"""Provide NYC Building Code compliance details \
+for missing milestone: {milestone}
 
 Respond ONLY with valid JSON in this exact format:
 {{

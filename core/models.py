@@ -55,7 +55,10 @@ class CaptureClassification(BaseModel):
 
     mep_system: str | None = Field(
         None,
-        description="MEP subsystem if applicable (HVAC, Plumbing, Electrical, Fire Protection)",
+        description=(
+            "MEP subsystem if applicable "
+            "(HVAC, Plumbing, Electrical, Fire Protection)"
+        ),
     )
 
     # Supports floor codes: 01-99, PH (Penthouse), SC (Sub-Cellar), M (Mezzanine),
@@ -68,7 +71,10 @@ class CaptureClassification(BaseModel):
 
     zone: str = Field(
         ...,
-        description="Site quadrant or zone (North, South, East, West, Core, Hoist, etc.)",
+        description=(
+            "Site quadrant or zone "
+            "(North, South, East, West, Core, Hoist, etc.)"
+        ),
         min_length=2,
         max_length=50,
     )
@@ -84,7 +90,10 @@ class CaptureClassification(BaseModel):
         ...,
         ge=1,
         le=5,
-        description="Compliance importance: 1=Low, 2=Medium, 3=High, 4=Critical, 5=Life Safety",
+        description=(
+            "Compliance importance: 1=Low, 2=Medium, 3=High, "
+            "4=Critical, 5=Life Safety"
+        ),
     )
 
     evidence_notes: str = Field(
@@ -187,7 +196,10 @@ class ComplianceGap(BaseModel):
 
     dob_code: str = Field(
         ...,
-        description="NYC Building Code reference (e.g., 'BC Chapter 22', 'BC Section 718')",
+        description=(
+            "NYC Building Code reference "
+            "(e.g., 'BC Chapter 22', 'BC Section 718')"
+        ),
         min_length=5,
     )
 
@@ -198,12 +210,18 @@ class ComplianceGap(BaseModel):
     dob_class: str = Field(
         "Class B",
         pattern=r"^Class [ABC]$",
-        description="NYC DOB Violation Class (A=Non-Hazardous, B=Hazardous, C=Immediately Hazardous)",
+        description=(
+            "NYC DOB Violation Class "
+            "(A=Non-Hazardous, B=Hazardous, C=Immediately Hazardous)"
+        ),
     )
 
     deadline: str = Field(
         ...,
-        description="Remediation deadline (e.g., 'Immediately', 'Within 7 Days', '30-45 Days')",
+        description=(
+            "Remediation deadline "
+            "(e.g., 'Immediately', 'Within 7 Days', '30-45 Days')"
+        ),
     )
 
     recommendation: str = Field(

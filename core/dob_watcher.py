@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pandas as pd
 import requests
@@ -10,14 +10,14 @@ def get_active_permits(bbl: str):
     Example BBL: '3070620001' (Borough 3, Block 7062, Lot 1)
     """
     # Dataset ID for DOB NOW: Build Approved Permits
-    DATASET_ID = "w9ak-ipjd"
-    API_URL = f"https://data.cityofnewyork.us/resource/{DATASET_ID}.json"
+    dataset_id = "w9ak-ipjd"
+    api_url = f"https://data.cityofnewyork.us/resource/{dataset_id}.json"
 
     # Query: Filter by BBL and only show active/issued permits
     # We use SoQL (Socrata Query Language)
     params = {"$where": f"bin = '{bbl}'", "$limit": 50}  # Or use 'bin' or 'job_number'
 
-    response = requests.get(API_URL, params=params)
+    response = requests.get(api_url, params=params)
     if response.status_code != 200:
         return None
 

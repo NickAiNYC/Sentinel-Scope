@@ -1,6 +1,5 @@
 import base64
 import json
-from typing import List
 
 from openai import OpenAI
 
@@ -35,7 +34,8 @@ class SiteClassifier:
         You are a NYC Construction Audit Specialist. 
         Analyze the provided site capture for a {project_type} project.
         
-        Classify the capture into ONE of these milestones: {', '.join(MILESTONES[project_type])}.
+        Classify the capture into ONE of these milestones:
+        {', '.join(MILESTONES[project_type])}.
         
         Return ONLY a JSON object with these keys:
         - milestone: (The string name of the detected milestone)
@@ -54,7 +54,10 @@ class SiteClassifier:
                         "content": [
                             {
                                 "type": "text",
-                                "text": "Identify the milestone in this NYC construction site capture.",
+                                "text": (
+                                    "Identify the milestone in this NYC "
+                                    "construction site capture."
+                                ),
                             },
                             {
                                 "type": "image_url",

@@ -15,11 +15,9 @@ import base64
 import concurrent.futures
 import hashlib
 import json
-import os
 import time
 from collections.abc import Callable
-from functools import lru_cache
-from typing import Any, List, Optional, Union
+from typing import Any
 
 import streamlit as st
 from openai import OpenAI
@@ -132,7 +130,7 @@ Be precise but concise. Focus on regulatory-relevant details.
                 return base64.b64encode(data).decode("utf-8"), image_hash
 
         except Exception as e:
-            raise OSError(f"Forensic Encoding Error: {str(e)}")
+            raise OSError(f"Forensic Encoding Error: {str(e)}") from e
 
     def _process_single_image(
         self, file_source: str | Any, progress_callback: Callable | None = None
@@ -181,7 +179,11 @@ Be precise but concise. Focus on regulatory-relevant details.
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": f"Audit this capture. Respond strictly using this Pydantic schema: {CaptureClassification.model_json_schema()}",
+                                    "text": (
+                                        f"Audit this capture. Respond strictly "
+                                        f"using this Pydantic schema: "
+                                        f"{CaptureClassification.model_json_schema()}"
+                                    ),
                                 },
                                 {
                                     "type": "image_url",
@@ -219,7 +221,10 @@ Be precise but concise. Focus on regulatory-relevant details.
                 return result
 
             except json.JSONDecodeError as je:
-                error_msg = f"Invalid JSON from DeepSeek (attempt {attempt + 1}/{self.max_retries})"
+                error_msg = (
+                    f"Invalid JSON from DeepSeek "
+                    f"(attempt {attempt + 1}/{self.max_retries})"
+                )
                 if attempt < self.max_retries - 1:
                     time.sleep(2**attempt)  # Exponential backoff
                     continue
@@ -265,7 +270,10 @@ Be precise but concise. Focus on regulatory-relevant details.
                             zone="API_Throttled",
                             confidence=0.0,
                             compliance_relevance=0,
-                            evidence_notes="DeepSeek rate limit exceeded. Try again later.",
+                            evidence_notes=(
+                                "DeepSeek rate limit exceeded. "
+                                "Try again later."
+                            ),
                         )
 
                 # Handle authentication errors

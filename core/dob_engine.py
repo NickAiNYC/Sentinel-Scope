@@ -1,5 +1,4 @@
 import os
-from typing import Dict, List
 
 import requests
 
@@ -26,7 +25,10 @@ def fetch_live_dob_alerts(query_params: dict) -> list[dict]:
         "bbl": str(bbl),
         "$limit": 10,
         "$order": "issue_date DESC",
-        "$select": "violation_number, violation_type, issue_date, violation_category, respondent_name",
+        "$select": (
+            "violation_number, violation_type, issue_date, "
+            "violation_category, respondent_name"
+        ),
     }
 
     try:

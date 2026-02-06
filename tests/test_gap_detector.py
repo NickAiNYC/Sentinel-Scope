@@ -13,7 +13,10 @@ def structural_engine():
 
 # ✅ TEST: Partial Milestone Detection
 def test_detect_gaps_partial_completion(structural_engine):
-    """Checks that only finding 'Foundation' triggers a missing 'Structural Steel' gap."""
+    """
+    Checks that only finding 'Foundation' triggers a missing
+    'Structural Steel' gap.
+    """
     found_milestones = ["Foundation"]
 
     result = structural_engine.detect_gaps(found_milestones)

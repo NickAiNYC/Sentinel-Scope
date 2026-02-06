@@ -22,7 +22,10 @@ class NYCBoundaryError(SentinelError):
 
 
 class AIProviderError(SentinelError):
-    """Raised when DeepSeek-V3 or other Vision LLMs fail to respond or return invalid JSON."""
+    """
+    Raised when DeepSeek-V3 or other Vision LLMs fail to respond or
+    return invalid JSON.
+    """
 
     pass
 
