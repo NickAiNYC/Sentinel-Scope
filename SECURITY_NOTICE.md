@@ -1,5 +1,24 @@
 # ⚠️ Important: Manual Cleanup Required
 
+## 🔧 TOML Parsing Error Fixed
+
+**Issue:** The `.streamlit/secrets.toml` file in git history (commits dd335d39 and 09f96fb0) contained a Unicode RIGHT DOUBLE QUOTATION MARK (U+201D: `"`) instead of an ASCII double quote (`"`), causing TOML parsing to fail with "Unbalanced quotes" error.
+
+**Fix Applied:** The file has been corrected to use proper ASCII quotes. If you encounter this error:
+```
+toml.decoder.TomlDecodeError: Unbalanced quotes (line 1 column 57 char 56)
+```
+
+**Solution:** Recreate the file using the template:
+```bash
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+# Edit with your actual API keys
+```
+
+Or manually ensure all quotes are ASCII double quotes (`"`, not fancy quotes `""`).
+
+---
+
 ## Security Alert - Exposed API Keys
 
 During the repository cleanup, we discovered that sensitive credentials were committed to git history. While these files are now in `.gitignore`, they still exist in past commits.
@@ -9,7 +28,7 @@ During the repository cleanup, we discovered that sensitive credentials were com
 1. `.env.txt` - Contains DeepSeek API key
 2. `secret.toml` - Contains DeepSeek API key  
 3. `.streamlit:secrets.toml` - Contains DeepSeek API key, Supabase credentials
-4. `.streamlit/secrets.toml` - Contains DeepSeek API key
+4. `.streamlit/secrets.toml` - Contains DeepSeek API key (**Also has TOML syntax error - see above**)
 
 ### Exposed Credentials
 
