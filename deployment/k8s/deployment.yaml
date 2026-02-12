@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-scope
+  labels:
+    app: sentinel-scope
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sentinel-scope
+  template:
+    metadata:
+      labels:
+        app: sentinel-scope
+    spec:
+      containers:
+        - name: sentinel-scope
+          image: sentinel-scope:latest
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+          envFrom:
+            - configMapRef:
+                name: sentinel-scope-config
+            - secretRef:
+                name: sentinel-scope-secrets

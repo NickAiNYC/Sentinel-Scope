@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel-scope
+  labels:
+    app: sentinel-scope
+spec:
+  type: ClusterIP
+  selector:
+    app: sentinel-scope
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000

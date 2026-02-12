@@ -87,11 +87,12 @@ OUTPUT FORMAT (JSON):
             OpportunityClassification with DecisionProof audit trail
         """
         # Build user prompt with context
+        estimated_value_str = f"${estimated_value:,.0f}" if estimated_value else "Unknown"
         user_prompt = f"""Analyze this NYC agency project notification:
 
 AGENCY: {agency.value}
 PROJECT: {project_title}
-ESTIMATED VALUE: ${estimated_value:,.0f} if estimated_value else "Unknown"}
+ESTIMATED VALUE: {estimated_value_str}
 TRADE: {trade_category or "General Construction"}
 
 RAW TEXT:
