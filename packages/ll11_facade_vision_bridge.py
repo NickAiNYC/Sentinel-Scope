@@ -23,7 +23,8 @@ class FacadeCondition(StrEnum):
     """Facade condition classification per FISP categories."""
 
     SAFE = "SAFE"
-    SAFE_WITH_REPAIR = "SWARMP"  # Safe With A Repair & Maintenance Program
+    # SWARMP: Safe With A Repair & Maintenance Program (FISP term)
+    SAFE_WITH_REPAIR = "SWARMP"
     UNSAFE = "UNSAFE"
     INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
 

@@ -147,7 +147,7 @@ class TestLL11FacadeVisionBridge:
         assert result.violation_probability >= 0.85
         assert result.critical_exam_required is True
 
-    def test_spalling_swarmp(self, bridge):
+    def test_spalling_safe_with_repair(self, bridge):
         findings = [
             {"name": "spalling on facade", "confidence": 0.88},
         ]
