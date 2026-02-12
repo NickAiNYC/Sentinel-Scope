@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -167,8 +166,6 @@ class ComplianceSnapshot(BaseModel):
         None, description="Risk assessment at time of capture, if available"
     )
     version: str = Field(..., description="Schema version for forward-compatible deserialization")
-
-
 
 
 class AuditLogEntry(BaseModel):
