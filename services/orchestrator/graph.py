@@ -9,8 +9,8 @@ from typing import Any, Dict, Optional, TypedDict
 
 from langgraph.graph import StateGraph, END
 
-from services.agents.visual_scout import VisualScoutAgent
-from services.agents.guard_agent import GuardAgent
+from ..agents.visual_scout import VisualScoutAgent
+from ..agents.guard_agent import GuardAgent
 
 
 # ============================================================================
