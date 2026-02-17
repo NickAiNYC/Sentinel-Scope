@@ -1,7 +1,10 @@
 """
-VisualScoutAgent: DeepSeek-V3 Vision Analysis for NYC Construction Sites
+VisualScoutAgent: Enterprise VLM Vision Analysis for NYC Construction Sites
 
-Integrated from 'Scope' into SiteSentinel-AI's Agent Theater.
+Model-agnostic vision analysis supporting:
+- OpenAI GPT-4o Vision (SOC2, US-based)
+- Anthropic Claude 3.5 Sonnet (SOC2, US-based)
+
 Analyzes site imagery for progress milestones and Chapter 33 safety violations.
 
 Position in workflow: VISUAL_SCOUT → guard → fixer → proof
@@ -13,6 +16,7 @@ from typing import Any, Dict, Optional
 import httpx
 
 from .base_agent import BaseAgent
+from .vlm_router import VLMRouter, VLMRouterConfig
 
 
 class VisualScoutAgent(BaseAgent):
@@ -20,22 +24,28 @@ class VisualScoutAgent(BaseAgent):
     The 'Eyes' of SiteSentinel-AI.
     
     Responsibilities:
-    - Analyze construction site photos using DeepSeek-V3 Vision
+    - Analyze construction site photos using enterprise VLMs (GPT-4o/Claude 3.5)
     - Identify active construction milestones (e.g., Foundation, MEP)
     - Flag NYC Building Code Chapter 33 safety violations
     - Pass structured findings to GuardAgent for legal verification
     
-    Economics: $0.0012/image vs $500-2000 manual site audit
+    Architecture:
+    - Model-agnostic VLM router with SOC2 compliance
+    - Data residency enforcement (US-only by default)
+    - Configurable provider selection
+    
+    Economics: $0.0019/image vs $500-2000 manual site audit
     """
     
-    def __init__(self):
-        """Initialize VisualScoutAgent with DeepSeek credentials."""
-        self.api_key = os.getenv("DEEPSEEK_API_KEY")
-        if not self.api_key:
-            raise ValueError("DEEPSEEK_API_KEY environment variable is required")
+    def __init__(self, vlm_config: VLMRouterConfig | None = None):
+        """
+        Initialize VisualScoutAgent with enterprise VLM router.
         
-        self.endpoint = "https://api.deepseek.com/v1/chat/completions"
-        self.model = "deepseek-chat"  # DeepSeek-V3 with vision capabilities
+        Args:
+            vlm_config: VLM router configuration (default from env)
+        """
+        # Initialize model-agnostic VLM router
+        self.vlm_router = VLMRouter(config=vlm_config)
         self.timeout = 30.0
     
     async def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -72,53 +82,34 @@ class VisualScoutAgent(BaseAgent):
         # Build NYC BC Chapter 33 compliance prompt
         prompt = self._build_chapter_33_prompt()
         
-        # Call DeepSeek-V3 Vision API
+        # Call enterprise VLM via router
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    self.endpoint,
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": self.model,
-                        "messages": [
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "text", "text": prompt},
-                                    {
-                                        "type": "image_url",
-                                        "image_url": {"url": image_url}
-                                    }
-                                ]
-                            }
-                        ],
-                        "temperature": 0.1,  # Low temp for forensic consistency
-                        "max_tokens": 1500
-                    },
-                    timeout=self.timeout
-                )
-                
-                response.raise_for_status()
-                result = response.json()
-                
-                # Extract vision analysis
-                analysis = result['choices'][0]['message']['content']
-                
-                # Parse structured data from response
-                findings = self._parse_findings(analysis)
-                
-                return {
-                    "visual_findings": findings["text"],
-                    "milestones_detected": findings.get("milestones", []),
-                    "violations_detected": findings.get("violations", []),
-                    "confidence_score": findings.get("confidence", 0.7),
-                    "agent_source": "VisualScout",
-                    "requires_legal_verification": True,
-                    "vision_model": self.model
-                }
+            # Route to configured provider (GPT-4o or Claude 3.5)
+            analysis = await self.vlm_router.analyze_construction_site(
+                image_url=image_url,
+                prompt=prompt,
+                max_tokens=1500,
+                temperature=0.1  # Low temp for forensic consistency
+            )
+            
+            # Parse structured data from response
+            findings = self._parse_findings(analysis)
+            
+            # Get provider info for audit trail
+            provider_info = self.vlm_router.get_provider_info()
+            
+            return {
+                "visual_findings": findings["text"],
+                "milestones_detected": findings.get("milestones", []),
+                "violations_detected": findings.get("violations", []),
+                "confidence_score": findings.get("confidence", 0.7),
+                "agent_source": "VisualScout",
+                "requires_legal_verification": True,
+                "vision_provider": provider_info["provider"],
+                "vision_model": provider_info["model"],
+                "soc2_compliant": provider_info["soc2_compliant"],
+                "data_residency": provider_info["data_residency"]
+            }
         
         except httpx.TimeoutException:
             return {

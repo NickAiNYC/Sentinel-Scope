@@ -1,15 +1,21 @@
-# 🏗️ SiteSentinel-AI: Scope Vision Integration
+# 🏗️ SiteSentinel-AI: Enterprise Vision Integration
 
 ## 🎯 Overview
 
-This integration merges the standalone "Scope" computer vision module into SiteSentinel-AI's multi-agent compliance platform. The result is a **unified multi-modal pipeline** that analyzes both visual evidence AND permit/legal data for NYC construction sites.
+This integration merges standalone computer vision capabilities into SiteSentinel-AI's multi-agent compliance platform. The result is a **unified multi-modal pipeline** that analyzes both visual evidence AND permit/legal data for NYC construction sites.
+
+**Production-Ready Architecture:**
+- Model-agnostic VLM routing (GPT-4o, Claude 3.5)
+- SOC2 Type II compliant providers
+- US-based infrastructure (data residency enforced)
+- Row-Level Security (RLS) multi-tenancy
 
 ## 🧠 Multi-Modal Agent Pipeline
 
 **The only NYC compliance platform that SEES + READS + PROVES:**
 
 ```
-PHOTO UPLOAD → VISUAL SCOUT (DeepSeek-V3)
+PHOTO UPLOAD → VISUAL SCOUT (GPT-4o / Claude 3.5)
        ↓
  LEGAL GUARD (LL149/152 + BC 2022)
        ↓
@@ -20,27 +26,63 @@ PHOTO UPLOAD → VISUAL SCOUT (DeepSeek-V3)
 
 ### Unified Coverage
 - **Portfolio Risk**: Permit data + DOB violations
-- **Site Vision**: Construction photo analysis
+- **Site Vision**: Construction photo analysis via enterprise VLMs
 - **Regulatory Reasoning**: NYC BC 2022 Chapter 33 compliance
+- **Data Sovereignty**: US-based, SOC2-aligned infrastructure
 
 ## 💰 Economics Story
 
 ```
-BEFORE (Scope standalone):  $0.0007 per permit/doc
-NOW (Integrated):           $0.0007 per doc + $0.0012 per photo = $0.0019 total
-STILL:                      500x cheaper than manual compliance audits ($1,000+)
+VLM Provider Costs:  $0.0019 per image (GPT-4o/Claude 3.5)
+Document analysis:   $0.0007 per permit/doc
+TOTAL per site:      $0.0026 total
+Manual audit:        $500 - $2,000
+ROI:                 99.87% cost reduction
 ```
 
 **Cost Breakdown:**
-- DeepSeek-V3 Vision: $0.0012 per image
+- Enterprise VLM (GPT-4o or Claude 3.5): $0.0019 per image
 - Document analysis: $0.0007 per permit/doc
-- **Total per site audit**: ~$0.0019
+- **Total per site audit**: ~$0.0026
 - **Manual audit cost**: $500-$2,000
-- **ROI**: 99.9% cost reduction
+- **ROI**: 99.87% cost reduction
+- **SOC2 Compliance**: Included (no additional cost)
 
 ## 🏗️ Architecture
 
-### 1. Backend: Vision Agent (`services/agents/visual_scout.py`)
+### 1. Backend: VLM Router (`services/agents/vlm_router.py`)
+
+**Model-Agnostic Vision Language Model Router**
+
+```python
+from services.agents.vlm_router import VLMRouter, VLMRouterConfig, VLMProvider
+
+# Configure for GPT-4o (default)
+config = VLMRouterConfig(
+    provider=VLMProvider.OPENAI_GPT4O,
+    data_residency=DataResidency.US_EAST_1,
+    enforce_us_only=True  # SOC2 compliance
+)
+
+router = VLMRouter(config=config)
+
+# Analyze construction site
+analysis = await router.analyze_construction_site(
+    image_url="https://s3.../site-photo.jpg"
+)
+```
+
+**Supported Providers:**
+- ✅ **OpenAI GPT-4o Vision** (Default, SOC2 Type II, US-based)
+- ✅ **Anthropic Claude 3.5 Sonnet** (SOC2 Type II, US-based)
+
+**Features:**
+- ✅ Automatic provider selection based on configuration
+- ✅ Data residency enforcement (us-east-1, us-west-2, nyc)
+- ✅ SOC2-aligned provider restrictions
+- ✅ Graceful fallback handling
+
+### 2. Backend: Vision Agent (`services/agents/visual_scout.py`)
 
 **Refactored from Scope's `core/gap_detector.py` and `core/processor.py`**
 
@@ -61,18 +103,22 @@ result = await agent.run({
 #   "milestones_detected": ["Foundation", "MEP Rough-in"],
 #   "violations_detected": ["BC §3314.1: Missing fall protection"],
 #   "confidence_score": 0.85,
-#   "requires_legal_verification": True
+#   "requires_legal_verification": True,
+#   "vision_provider": "openai-gpt4o",
+#   "vision_model": "gpt-4o",
+#   "soc2_compliant": true,
+#   "data_residency": "us-east-1"
 # }
 ```
 
 **Features:**
-- ✅ DeepSeek-V3 Vision API integration
+- ✅ Enterprise VLM integration (GPT-4o/Claude 3.5)
 - ✅ NYC Building Code Chapter 33 focused prompts
-- ✅ Parallel image processing (5 workers)
 - ✅ Graceful degradation (no image = skip)
 - ✅ Confidence scoring (0.0-1.0)
+- ✅ SOC2 compliance metadata in responses
 
-### 2. Backend: Database (`migrations/003_add_site_evidence.sql`)
+### 3. Backend: Database (`migrations/003_add_site_evidence.sql` + `004_final_security_audit.sql`)
 
 **Multi-tenant evidence storage with Row-Level Security (RLS)**
 
